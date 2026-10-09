@@ -1,8 +1,12 @@
+const foodRoutes = require("./routes/foodRoutes");
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
 const connectDB = require("./config/db");
+
+// Use the food routes
+app.use("/api/foods", foodRoutes);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
