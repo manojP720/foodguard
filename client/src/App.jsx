@@ -6,7 +6,7 @@ import {
 
   CheckCircle2, X, LoaderCircle, RefreshCw, CalendarDays, MapPin, 
 
-  Pencil, Search, Plus, Sparkles, ChevronRight, HelpCircle
+  Pencil, Search, Plus, Sparkles, ChevronRight, HelpCircle, Bell
 
 } from "lucide-react";
 
@@ -76,7 +76,7 @@ function getExpiryInfo(expiryDate) {
 
 
 
-const inputClass = "w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3.5 text-sm text-white backdrop-blur-xl outline-none transition-all duration-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 placeholder:text-slate-500 shadow-inner";
+const inputClass = "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 placeholder:text-slate-400 shadow-sm";
 
 
 
@@ -86,7 +86,7 @@ function FormField({ label, children }) {
 
     <div className="space-y-2">
 
-      <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase">{label}</span>
+      <span className="text-xs font-semibold tracking-wider text-slate-500 uppercase">{label}</span>
 
       {children}
 
@@ -102,11 +102,11 @@ function StatCard({ title, value, description, icon, type }) {
 
   const variants = {
 
-    safe: { ring: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5", glow: "from-emerald-500/20 to-transparent" },
+    safe: { ring: "border-emerald-500/30 text-emerald-700 bg-emerald-50", glow: "from-emerald-500/20 to-transparent" },
 
-    warning: { ring: "border-amber-500/30 text-amber-400 bg-amber-500/5", glow: "from-amber-500/20 to-transparent" },
+    warning: { ring: "border-amber-500/30 text-amber-700 bg-amber-50", glow: "from-amber-500/20 to-transparent" },
 
-    danger: { ring: "border-rose-500/30 text-rose-400 bg-rose-500/5", glow: "from-rose-500/20 to-transparent" }
+    danger: { ring: "border-rose-500/30 text-rose-700 bg-rose-50", glow: "from-rose-500/20 to-transparent" }
 
   };
 
@@ -116,21 +116,21 @@ function StatCard({ title, value, description, icon, type }) {
 
   return (
 
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-transparent p-5 sm:rounded-3xl sm:p-6 backdrop-blur-xl transition-all duration-500 hover:-translate-y-1.5 hover:border-white/20 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.7)] group">
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 sm:rounded-2xl sm:p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md group">
 
       <div className={`absolute -right-20 -top-20 h-40 w-40 rounded-full bg-gradient-to-br ${style.glow} blur-3xl opacity-50 transition-opacity duration-500 group-hover:opacity-100`} />
 
       <div className="flex items-center justify-between mb-6">
 
-        <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">{title}</p>
+        <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">{title}</p>
 
         <div className={`rounded-2xl border p-3 backdrop-blur-md ${style.ring}`}>{icon}</div>
 
       </div>
 
-      <p className="text-4xl font-black tracking-tight text-white">{value}</p>
+      <p className="text-3xl font-bold tracking-tight text-slate-900">{value}</p>
 
-      <p className="mt-2 text-xs font-medium text-slate-400 flex items-center gap-1.5">
+      <p className="mt-2 text-xs font-medium text-slate-500 flex items-center gap-1.5">
 
         <span className="h-1 w-1 rounded-full bg-current opacity-70" />
 
@@ -154,13 +154,13 @@ function FoodRow({ food, onEdit, onDelete, onConsume }) {
 
   const badgeConfig = {
 
-    danger: "bg-rose-500/10 text-rose-400 border-rose-500/20 ring-rose-500/30",
+    danger: "bg-rose-50 text-rose-700 border-rose-200 ring-rose-100",
 
-    warning: "bg-amber-500/10 text-amber-400 border-amber-500/20 ring-amber-500/30",
+    warning: "bg-amber-50 text-amber-700 border-amber-200 ring-amber-100",
 
-    imminent: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20 ring-cyan-500/30",
+    imminent: "bg-cyan-50 text-cyan-700 border-cyan-200 ring-cyan-100",
 
-    safe: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 ring-emerald-500/30"
+    safe: "bg-emerald-50 text-emerald-700 border-emerald-200 ring-emerald-100"
 
   };
 
@@ -178,11 +178,11 @@ function FoodRow({ food, onEdit, onDelete, onConsume }) {
 
   return (
 
-    <div className="group relative overflow-hidden flex flex-col gap-4 rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-md transition-all duration-300 hover:border-white/15 hover:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between shadow-lg">
+    <div className="group relative overflow-hidden flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 sm:flex-row sm:items-center sm:justify-between shadow-sm transition-all duration-200 hover:border-emerald-200 hover:shadow-md">
 
       <div className="flex min-w-0 items-center gap-4">
 
-        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-2xl shadow-inner group-hover:scale-105 transition-transform duration-300">
+        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-emerald-50 border border-emerald-100 text-2xl group-hover:scale-105 transition-transform duration-200">
 
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -194,21 +194,21 @@ function FoodRow({ food, onEdit, onDelete, onConsume }) {
 
           <div className="flex items-center gap-2">
 
-            <p className="truncate font-semibold text-white tracking-tight group-hover:text-emerald-400 transition-colors">{food.name}</p>
+            <p className="truncate font-semibold text-slate-900 tracking-tight group-hover:text-emerald-700 transition-colors">{food.name}</p>
 
-            <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-white/5 border border-white/5 text-slate-400">{food.category}</span>
+            <span className="text-[10px] font-semibold tracking-wide uppercase px-2 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-400">{food.category}</span>
 
           </div>
 
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-400">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-500">
 
-            <span className="text-slate-300">{food.quantity} {food.unit}</span>
+            <span className="text-slate-700">{food.quantity} {food.unit}</span>
 
-            <span className="text-slate-600">•</span>
+            <span className="text-slate-400">•</span>
 
             <span className="flex items-center gap-1"><MapPin size={12} className="text-slate-500" />{food.storageLocation || "Pantry"}</span>
 
-            <span className="text-slate-600">•</span>
+            <span className="text-slate-400">•</span>
 
             <span className="flex items-center gap-1"><CalendarDays size={12} className="text-slate-500" />Exp: {new Date(food.expiryDate).toLocaleDateString()}</span>
 
@@ -218,7 +218,7 @@ function FoodRow({ food, onEdit, onDelete, onConsume }) {
 
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-white/5 pt-3 sm:border-0 sm:pt-0 sm:justify-end">
+      <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:border-0 sm:pt-0 sm:justify-end">
 
         <span className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold ring-1 ${badgeConfig[status] || badgeConfig.safe}`}>
 
@@ -236,11 +236,11 @@ function FoodRow({ food, onEdit, onDelete, onConsume }) {
 
         <div className="flex items-center gap-2">
 
-          <button type="button" onClick={onConsume} title="Mark as consumed" aria-label={`Mark ${food.name} as consumed`} className="rounded-xl border border-white/5 bg-white/5 p-2.5 text-slate-400 transition-all duration-200 hover:border-cyan-500/30 hover:bg-cyan-500/10 hover:text-cyan-300"><CheckCircle2 size={15} /></button>
+          <button type="button" onClick={onConsume} title="Mark as consumed" aria-label={`Mark ${food.name} as consumed`} className="rounded-lg border border-slate-200 bg-white p-2.5 text-slate-500 transition-all duration-200 hover:border-cyan-500/30 hover:bg-cyan-50 hover:text-cyan-700"><CheckCircle2 size={15} /></button>
 
-          <button type="button" onClick={onEdit} title="Edit food item" aria-label={`Edit ${food.name}`} className="rounded-xl border border-white/5 bg-white/5 p-2.5 text-slate-400 transition-all duration-200 hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-400"><Pencil size={15} /></button>
+          <button type="button" onClick={onEdit} title="Edit food item" aria-label={`Edit ${food.name}`} className="rounded-lg border border-slate-200 bg-white p-2.5 text-slate-500 transition-all duration-200 hover:border-emerald-500/30 hover:bg-emerald-50 hover:text-emerald-700"><Pencil size={15} /></button>
 
-          <button type="button" onClick={onDelete} title="Delete food item" aria-label={`Delete ${food.name}`} className="rounded-xl border border-white/5 bg-white/5 p-2.5 text-slate-400 transition-all duration-200 hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-400"><Trash2 size={15} /></button>
+          <button type="button" onClick={onDelete} title="Delete food item" aria-label={`Delete ${food.name}`} className="rounded-lg border border-slate-200 bg-white p-2.5 text-slate-500 transition-all duration-200 hover:border-rose-500/30 hover:bg-rose-50 hover:text-rose-700"><Trash2 size={15} /></button>
 
         </div>
 
@@ -269,6 +269,7 @@ function App() {
   const [showModal, setShowModal] = useState(false);
 
   const [editingFood, setEditingFood] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const [search, setSearch] = useState("");
 
@@ -320,7 +321,16 @@ function App() {
 
   }, [foods]);
 
+  // In-app expiry reminders: active items expiring within 7 days, plus expired items.
+  const expiryReminders = useMemo(() => {
+    return foods
+      .filter((food) => !food.consumed && food.expiryDate)
+      .map((food) => ({ ...food, expiryInfo: getExpiryInfo(food.expiryDate) }))
+      .filter((food) => food.expiryInfo.days <= 7)
+      .sort((a, b) => a.expiryInfo.days - b.expiryInfo.days);
+  }, [foods]);
 
+  const reminderCount = expiryReminders.length;
 
   const filteredFoods = useMemo(() => {
 
@@ -454,17 +464,11 @@ function App() {
 
   return (
 
-    <div className="relative min-h-screen bg-slate-950 text-slate-100 font-sans antialiased overflow-x-hidden">
+    <div className="relative min-h-screen bg-[#f6f8f5] text-slate-800 font-sans antialiased overflow-x-hidden">
 
       {/* Soft background accents */}
 
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
-
-        <div className="absolute top-[-10%] left-[-10%] h-[600px] w-[600px] rounded-full bg-emerald-500/10 blur-[140px]" />
-
-        <div className="absolute bottom-[20%] right-[-5%] h-[500px] w-[500px] rounded-full bg-cyan-500/10 blur-[130px]" />
-
-      </div>
+      
 
 
 
@@ -472,23 +476,23 @@ function App() {
 
         {/* Primary navigation */}
 
-        <aside className="hidden w-72 border-r border-white/5 bg-slate-900/20 p-6 backdrop-blur-2xl md:flex flex-col justify-between">
+        <aside className="hidden w-72 border-r border-slate-200/80 bg-white p-6 shadow-sm md:flex flex-col justify-between">
 
           <div>
 
             <div className="flex items-center gap-3 px-2 mb-10 group">
 
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.4)] transition-transform duration-500 group-hover:rotate-12">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600 shadow-sm transition-transform duration-500 group-hover:rotate-12">
 
-                <Leaf className="text-slate-950 h-5 w-5 fill-slate-950" />
+                <Leaf className="text-white h-5 w-5 fill-white" />
 
               </div>
 
               <div>
 
-                <span className="text-lg font-black tracking-wider text-white uppercase block">FoodGuard</span>
+                <span className="text-lg font-extrabold tracking-tight text-slate-900 uppercase block">FoodGuard</span>
 
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block -mt-0.5">Food Inventory</span>
+                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.16em] block -mt-0.5">Food Inventory</span>
 
               </div>
 
@@ -516,13 +520,13 @@ function App() {
 
                   onClick={() => setActiveView(item.id)}
 
-                  className={`flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-sm font-semibold tracking-wide transition-all duration-300 group ${
+                  className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group ${
 
                     activeView === item.id
 
-                      ? "bg-gradient-to-r from-emerald-500/10 to-transparent text-emerald-400 border-l-2 border-emerald-500 px-5"
+                      ? "bg-emerald-50 text-emerald-800 border-l-2 border-emerald-600 px-5"
 
-                      : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                      : "text-slate-400 hover:bg-slate-50 hover:text-slate-900"
 
                   }`}
 
@@ -548,17 +552,17 @@ function App() {
 
 
 
-          <div className="rounded-2xl border border-white/5 bg-white/5 p-4 backdrop-blur-md">
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
 
             <div className="flex items-center gap-3">
 
               <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
 
-              <p className="text-xs font-semibold tracking-wide text-slate-400">Inventory connected</p>
+              <p className="text-xs font-semibold tracking-wide text-slate-700">Your inventory is ready</p>
 
             </div>
 
-            <p className="text-[10px] text-slate-500 font-medium mt-1">Your food, tracked in one place</p>
+            <p className="text-[10px] text-slate-500 font-medium mt-1">Everything you have, in one place</p>
 
           </div>
 
@@ -568,7 +572,7 @@ function App() {
 
         {/* Primary Workspace */}
 
-        <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-8 lg:p-10">
+        <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-8 lg:p-10 max-w-[1600px] mx-auto w-full">
           <nav aria-label="Main navigation" className="mb-6 grid grid-cols-4 gap-2 md:hidden">
             {[
               { id: "Dashboard", icon: <LayoutDashboard size={16} /> },
@@ -576,7 +580,7 @@ function App() {
               { id: "Expiring Soon", icon: <Clock3 size={16} /> },
               { id: "Food Waste", icon: <Trash2 size={16} /> },
             ].map((item) => (
-              <button key={item.id} type="button" onClick={() => setActiveView(item.id)} className={`flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-xl border px-1 py-2 text-[10px] font-semibold transition-colors ${activeView === item.id ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-white/5 bg-white/[0.03] text-slate-400 hover:bg-white/5"}`}>
+              <button key={item.id} type="button" onClick={() => setActiveView(item.id)} className={`flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-xl border px-1 py-2 text-[10px] font-semibold transition-colors ${activeView === item.id ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-400 hover:bg-slate-50"}`}>
                 {item.icon}<span>{item.id}</span>
               </button>
             ))}
@@ -586,29 +590,61 @@ function App() {
 
             <div>
 
-              <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-emerald-400 uppercase mb-1">
+              <div className="flex items-center gap-2 text-xs font-bold tracking-[0.16em] text-emerald-700 uppercase mb-2">
 
-                <Sparkles size={12} /> SMART FOOD TRACKER
+                <Sparkles size={12} /> YOUR KITCHEN, ORGANIZED
 
               </div>
 
-              <h1 className="text-2xl font-black tracking-tight text-white sm:text-4xl">{activeView}</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{activeView}</h1>
 
-              <p className="text-sm font-medium text-slate-400 mt-1.5">Track your groceries, reduce waste, and use food before it expires.</p>
+              <p className="text-sm text-slate-400 mt-2">Keep track of what you have and use it before it expires.</p>
 
             </div>
 
-            <button
-
-              onClick={openAddModal}
-
-              className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-3.5 text-sm font-bold text-slate-950 transition-all duration-300 hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] active:scale-95"
-
-            >
-
-              <Plus size={16} strokeWidth={3} /> Add food item
-
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowNotifications((open) => !open)}
+                  aria-label={`Expiry notifications${reminderCount ? `, ${reminderCount} alerts` : ""}`}
+                  title="Expiry reminders"
+                  className="relative flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                >
+                  <Bell size={19} />
+                  {reminderCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{reminderCount > 99 ? "99+" : reminderCount}</span>}
+                </button>
+                {showNotifications && (
+                  <div className="absolute right-0 z-40 mt-3 w-[min(88vw,360px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                    <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                      <div><p className="text-sm font-bold text-slate-900">Expiry reminders</p><p className="mt-0.5 text-xs text-slate-500">Items needing your attention</p></div>
+                      <button type="button" onClick={() => setShowNotifications(false)} aria-label="Close reminders" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X size={16} /></button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto p-2">
+                      {expiryReminders.length === 0 ? (
+                        <div className="px-4 py-8 text-center"><CheckCircle2 className="mx-auto mb-2 text-emerald-600" size={25} /><p className="text-sm font-semibold text-slate-800">You’re all caught up</p><p className="mt-1 text-xs text-slate-500">No expired or soon-to-expire items.</p></div>
+                      ) : expiryReminders.map((food) => {
+                        const expired = food.expiryInfo.days < 0;
+                        return (
+                          <button key={food._id} type="button" onClick={() => { setActiveView(expired ? "Food Waste" : "Expiring Soon"); setShowNotifications(false); }} className="flex w-full items-start gap-3 rounded-xl p-3 text-left transition hover:bg-slate-50">
+                            <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${expired ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-700"}`}><AlertTriangle size={17} /></span>
+                            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-slate-800">{food.name}</span><span className="mt-0.5 block text-xs text-slate-500">{food.quantity} {food.unit} · {food.expiryInfo.label}</span></span>
+                            <ChevronRight size={16} className="mt-1 shrink-0 text-slate-400" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {reminderCount > 0 && <button type="button" onClick={() => { setActiveView("Expiring Soon"); setShowNotifications(false); }} className="w-full border-t border-slate-100 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">View expiring items</button>}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={openAddModal}
+                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-emerald-700 hover:shadow-md active:scale-[0.98]"
+              >
+                <Plus size={16} strokeWidth={3} /> Add food item
+              </button>
+            </div>
 
           </header>
 
@@ -618,7 +654,7 @@ function App() {
 
           {notice && (
 
-            <div className="mb-6 flex items-center justify-between rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm text-emerald-400 backdrop-blur-md shadow-lg">
+            <div className="mb-6 flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 shadow-sm">
 
               <div className="flex items-center gap-3">
 
@@ -628,7 +664,7 @@ function App() {
 
               </div>
 
-              <button onClick={() => setNotice("")} className="text-slate-500 hover:text-emerald-400 p-1.5 rounded-xl hover:bg-white/5 transition-all">
+              <button onClick={() => setNotice("")} className="text-emerald-700 hover:text-emerald-900 p-1.5 rounded-xl hover:bg-emerald-100 transition-all">
 
                 <X size={16} />
 
@@ -642,7 +678,7 @@ function App() {
 
           {error && (
 
-            <div className="mb-6 flex items-center justify-between rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 text-sm text-rose-400 backdrop-blur-md shadow-lg">
+            <div className="mb-6 flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
 
               <div className="flex items-center gap-3">
 
@@ -652,7 +688,7 @@ function App() {
 
               </div>
 
-              <button onClick={() => setError("")} className="text-slate-500 hover:text-rose-400 p-1.5 rounded-xl hover:bg-white/5 transition-all">
+              <button onClick={() => setError("")} className="text-rose-600 hover:text-rose-800 p-1.5 rounded-xl hover:bg-rose-100 transition-all">
 
                 <X size={16} />
 
@@ -668,13 +704,13 @@ function App() {
 
           <section className="mb-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
-            <StatCard title="Items in inventory" value={stats.total} description="Food items you are tracking" icon={<Package size={18} />} type="safe" />
+            <StatCard title="Total items" value={stats.total} description="Food items you are tracking" icon={<Package size={18} />} type="safe" />
 
             <StatCard title="Expiring soon" value={stats.expiring} description="Expiry within the next 7 days" icon={<Clock3 size={18} />} type="warning" />
 
-            <StatCard title="Already expired" value={stats.expired} description="Items past their expiry date" icon={<Trash2 size={18} />} type="danger" />
+            <StatCard title="Expired" value={stats.expired} description="Items past their expiry date" icon={<Trash2 size={18} />} type="danger" />
 
-            <StatCard title="Food used" value={stats.consumed} description="Items marked as consumed" icon={<CheckCircle2 size={18} />} type="safe" />
+            <StatCard title="Consumed" value={stats.consumed} description="Items marked as consumed" icon={<CheckCircle2 size={18} />} type="safe" />
 
           </section>
 
@@ -686,7 +722,7 @@ function App() {
 
             <div className="relative flex-1 group">
 
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-emerald-400" />
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-emerald-700" />
 
               <input
 
@@ -698,7 +734,7 @@ function App() {
 
                 onChange={(e) => setSearch(e.target.value)}
 
-                className="w-full rounded-2xl border border-white/5 bg-slate-900/30 pl-12 pr-4 py-3.5 text-sm text-white placeholder:text-slate-500 outline-none transition-all duration-300 focus:border-white/10 focus:bg-slate-900/60 focus:ring-4 focus:ring-emerald-500/5 shadow-inner"
+                className="w-full rounded-2xl border border-slate-200 bg-white pl-12 pr-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 shadow-sm"
 
               />
 
@@ -710,11 +746,11 @@ function App() {
 
               disabled={loading}
 
-              className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-slate-900/30 text-slate-400 transition-all duration-300 hover:border-white/10 hover:bg-slate-900/60 hover:text-white disabled:opacity-40"
+              className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40"
 
             >
 
-              <RefreshCw size={16} className={loading ? "animate-spin text-emerald-400" : ""} />
+              <RefreshCw size={16} className={loading ? "animate-spin text-emerald-700" : ""} />
 
             </button>
 
@@ -730,21 +766,21 @@ function App() {
 
               <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-4">
 
-                <LoaderCircle className="animate-spin text-emerald-400" size={36} />
+                <LoaderCircle className="animate-spin text-emerald-700" size={36} />
 
-                <p className="text-sm font-semibold tracking-wider uppercase text-slate-400 animate-pulse">Loading your food inventory...</p>
+                <p className="text-sm font-semibold tracking-wider uppercase text-slate-400 animate-pulse">Loading your inventory...</p>
 
               </div>
 
             ) : filteredFoods.length === 0 ? (
 
-              <div className="text-center py-20 rounded-3xl border border-dashed border-white/5 bg-slate-900/10 backdrop-blur-sm">
+              <div className="text-center py-20 rounded-2xl border border-dashed border-slate-300 bg-white">
 
-                <Package className="mx-auto text-slate-700 mb-4" size={48} />
+                <Package className="mx-auto text-slate-300 mb-4" size={48} />
 
-                <p className="text-slate-400 font-bold tracking-tight text-lg">Your inventory is empty</p>
+                <p className="text-slate-800 font-semibold tracking-tight text-lg">Your inventory is empty</p>
 
-                <p className="text-xs text-slate-600 mt-1.5 max-w-xs mx-auto">Add your first food item to start tracking expiry dates.</p>
+                <p className="text-xs text-slate-400 mt-1.5 max-w-xs mx-auto">Add your first food item to start tracking expiry dates.</p>
 
               </div>
 
@@ -780,15 +816,15 @@ function App() {
 
       {showModal && (
 
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm animate-fade-in">
 
-          <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-slate-900/80 p-7 shadow-2xl relative backdrop-blur-2xl max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl relative max-h-[90vh] overflow-y-auto">
 
             <button
 
               onClick={() => { setShowModal(false); setEditingFood(null); }}
 
-              className="absolute top-5 right-5 rounded-xl p-2 text-slate-400 transition-all hover:bg-white/5 hover:text-white"
+              className="absolute top-5 right-5 rounded-xl p-2 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900"
 
             >
 
@@ -796,7 +832,7 @@ function App() {
 
             </button>
 
-            <h2 className="text-xl font-black text-white tracking-tight mb-6">{editingFood ? "Edit food item" : "Add food item"}</h2>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">{editingFood ? "Edit food item" : "Add food item"}</h2>
 
 
 
@@ -840,7 +876,7 @@ function App() {
 
                     {["Vegetables", "Fruits", "Dairy", "Bakery", "Meat", "Seafood", "Grains", "Beverages", "Frozen", "Other"].map((cat) => (
 
-                      <option key={cat} value={cat} className="bg-slate-950 text-white">{cat}</option>
+                      <option key={cat} value={cat} className="bg-white text-slate-800">{cat}</option>
 
                     ))}
 
@@ -950,7 +986,7 @@ function App() {
 
                   {["Refrigerator", "Freezer", "Pantry", "Countertop"].map((loc) => (
 
-                    <option key={loc} value={loc} className="bg-slate-950 text-white">{loc}</option>
+                    <option key={loc} value={loc} className="bg-white text-slate-800">{loc}</option>
 
                   ))}
 
@@ -980,7 +1016,7 @@ function App() {
 
 
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/5">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
 
                 <button
 
@@ -988,7 +1024,7 @@ function App() {
 
                   onClick={() => { setShowModal(false); setEditingFood(null); }}
 
-                  className="rounded-2xl border border-white/5 px-5 py-3.5 text-sm font-bold text-slate-400 transition-all hover:bg-white/5 hover:text-white"
+                  className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900"
 
                 >
 
@@ -1002,7 +1038,7 @@ function App() {
 
                   disabled={saving}
 
-                  className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3.5 text-sm font-bold text-slate-950 transition-all duration-300 hover:shadow-[0_0_25px_rgba(16,185,129,0.2)] disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-slate-900 transition-all duration-200 hover:bg-emerald-700 disabled:opacity-50"
 
                 >
 
