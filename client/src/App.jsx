@@ -1,1069 +1,1095 @@
+
 import { useEffect, useMemo, useState } from "react";
-
 import {
-
-  LayoutDashboard, Package, Clock3, Trash2, Leaf, AlertTriangle, 
-
-  CheckCircle2, X, LoaderCircle, RefreshCw, CalendarDays, MapPin, 
-
-  Pencil, Search, Plus, Sparkles, ChevronRight, HelpCircle, Bell
-
+  LayoutDashboard,
+  Package,
+  Clock3,
+  Trash2,
+  Leaf,
+  AlertTriangle,
+  CheckCircle2,
+  X,
+  LoaderCircle,
+  RefreshCw,
+  CalendarDays,
+  MapPin,
+  Pencil,
+  Search,
+  Plus,
+  Sparkles,
+  Bell,
+  LogOut,
+  Menu,
 } from "lucide-react";
 
-import { getFoods, addFood, updateFood, deleteFood } from "./services/foodService";
-
-
+import AuthPage from "./AuthPage";
+import {
+  getFoods,
+  addFood,
+  updateFood,
+  deleteFood,
+} from "./services/foodService";
 
 const todayString = () => {
-
   const date = new Date();
-
   date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-
   return date.toISOString().slice(0, 10);
-
 };
-
-
 
 const initialForm = {
-
-  name: "", category: "Vegetables", quantity: "1", unit: "pieces",
-
-  purchaseDate: todayString(), expiryDate: "", storageLocation: "Refrigerator", notes: "",
-
+  name: "",
+  category: "Vegetables",
+  quantity: "1",
+  unit: "pieces",
+  purchaseDate: todayString(),
+  expiryDate: "",
+  storageLocation: "Refrigerator",
+  notes: "",
 };
 
-
-
 function dateInputValue(value) {
-
   if (!value) return "";
-
   const date = new Date(value);
-
   if (Number.isNaN(date.getTime())) return "";
-
   date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-
   return date.toISOString().slice(0, 10);
-
 }
 
-
-
 function getExpiryInfo(expiryDate) {
+  if (!expiryDate) {
+    return { days: Infinity, status: "safe", label: "No expiry date" };
+  }
 
   const today = new Date();
-
   today.setHours(0, 0, 0, 0);
 
   const expiry = new Date(expiryDate);
-
   expiry.setHours(0, 0, 0, 0);
+
+  if (Number.isNaN(expiry.getTime())) {
+    return { days: Infinity, status: "safe", label: "Unknown expiry" };
+  }
 
   const days = Math.round((expiry - today) / 86400000);
 
-  if (days < 0) return { days, status: "danger", label: `Expired ${Math.abs(days)}d ago` };
+  if (days < 0) {
+    return {
+      days,
+      status: "danger",
+      label: `Expired ${Math.abs(days)}d ago`,
+    };
+  }
 
-  if (days === 0) return { days, status: "warning", label: "Expires Today" };
+  if (days === 0) {
+    return { days, status: "warning", label: "Expires Today" };
+  }
 
-  if (days <= 7) return { days, status: "imminent", label: `${days} days left` };
+  if (days <= 7) {
+    return { days, status: "imminent", label: `${days} days left` };
+  }
 
   return { days, status: "safe", label: `${days} days left` };
-
 }
 
-
-
-const inputClass = "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 placeholder:text-slate-400 shadow-sm";
-
-
+const inputClass =
+  "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10";
 
 function FormField({ label, children }) {
-
   return (
-
     <div className="space-y-2">
-
-      <span className="text-xs font-semibold tracking-wider text-slate-500 uppercase">{label}</span>
-
+      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+        {label}
+      </label>
       {children}
-
     </div>
-
   );
-
 }
 
-
-
-function StatCard({ title, value, description, icon, type }) {
-
-  const variants = {
-
-    safe: { ring: "border-emerald-500/30 text-emerald-700 bg-emerald-50", glow: "from-emerald-500/20 to-transparent" },
-
-    warning: { ring: "border-amber-500/30 text-amber-700 bg-amber-50", glow: "from-amber-500/20 to-transparent" },
-
-    danger: { ring: "border-rose-500/30 text-rose-700 bg-rose-50", glow: "from-rose-500/20 to-transparent" }
-
+function StatCard({ title, value, description, icon, type = "safe" }) {
+  const styles = {
+    safe: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    warning: "border-amber-200 bg-amber-50 text-amber-700",
+    danger: "border-rose-200 bg-rose-50 text-rose-700",
   };
 
-  const style = variants[type] || variants.safe;
-
-
-
   return (
-
-    <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 sm:rounded-2xl sm:p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md group">
-
-      <div className={`absolute -right-20 -top-20 h-40 w-40 rounded-full bg-gradient-to-br ${style.glow} blur-3xl opacity-50 transition-opacity duration-500 group-hover:opacity-100`} />
-
-      <div className="flex items-center justify-between mb-6">
-
-        <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">{title}</p>
-
-        <div className={`rounded-2xl border p-3 backdrop-blur-md ${style.ring}`}>{icon}</div>
-
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="mb-5 flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {title}
+        </p>
+        <div className={`rounded-xl border p-3 ${styles[type]}`}>
+          {icon}
+        </div>
       </div>
-
-      <p className="text-3xl font-bold tracking-tight text-slate-900">{value}</p>
-
-      <p className="mt-2 text-xs font-medium text-slate-500 flex items-center gap-1.5">
-
-        <span className="h-1 w-1 rounded-full bg-current opacity-70" />
-
-        {description}
-
+      <p className="text-3xl font-bold tracking-tight text-slate-900">
+        {value}
       </p>
-
+      <p className="mt-2 text-xs text-slate-500">{description}</p>
     </div>
-
   );
-
 }
-
-
 
 function FoodRow({ food, onEdit, onDelete, onConsume }) {
-
   const { status, label } = getExpiryInfo(food.expiryDate);
 
-
-
-  const badgeConfig = {
-
-    danger: "bg-rose-50 text-rose-700 border-rose-200 ring-rose-100",
-
-    warning: "bg-amber-50 text-amber-700 border-amber-200 ring-amber-100",
-
-    imminent: "bg-cyan-50 text-cyan-700 border-cyan-200 ring-cyan-100",
-
-    safe: "bg-emerald-50 text-emerald-700 border-emerald-200 ring-emerald-100"
-
+  const badgeStyles = {
+    danger: "border-rose-200 bg-rose-50 text-rose-700",
+    warning: "border-amber-200 bg-amber-50 text-amber-700",
+    imminent: "border-cyan-200 bg-cyan-50 text-cyan-700",
+    safe: "border-emerald-200 bg-emerald-50 text-emerald-700",
   };
 
-
-
-  const emojiByCategory = { 
-
-    Dairy: "🥛", Fruits: "🍎", Vegetables: "🥦", Bakery: "🍞", 
-
-    Meat: "🥩", Seafood: "🐟", Grains: "🌾", Beverages: "🧃", Frozen: "🧊" 
-
+  const emojis = {
+    Dairy: "🥛",
+    Fruits: "🍎",
+    Vegetables: "🥦",
+    Bakery: "🍞",
+    Meat: "🥩",
+    Seafood: "🐟",
+    Grains: "🌾",
+    Beverages: "🧃",
+    Frozen: "🧊",
   };
-
-
 
   return (
-
-    <div className="group relative overflow-hidden flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 sm:flex-row sm:items-center sm:justify-between shadow-sm transition-all duration-200 hover:border-emerald-200 hover:shadow-md">
-
+    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-4">
-
-        <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-emerald-50 border border-emerald-100 text-2xl group-hover:scale-105 transition-transform duration-200">
-
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-          {emojiByCategory[food.category] || "📦"}
-
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-2xl">
+          {emojis[food.category] || "📦"}
         </div>
 
         <div className="min-w-0">
-
-          <div className="flex items-center gap-2">
-
-            <p className="truncate font-semibold text-slate-900 tracking-tight group-hover:text-emerald-700 transition-colors">{food.name}</p>
-
-            <span className="text-[10px] font-semibold tracking-wide uppercase px-2 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-400">{food.category}</span>
-
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold text-slate-900">{food.name}</p>
+            <span className="rounded-md border border-slate-200 bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase text-slate-500">
+              {food.category}
+            </span>
           </div>
 
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-500">
-
-            <span className="text-slate-700">{food.quantity} {food.unit}</span>
-
-            <span className="text-slate-400">•</span>
-
-            <span className="flex items-center gap-1"><MapPin size={12} className="text-slate-500" />{food.storageLocation || "Pantry"}</span>
-
-            <span className="text-slate-400">•</span>
-
-            <span className="flex items-center gap-1"><CalendarDays size={12} className="text-slate-500" />Exp: {new Date(food.expiryDate).toLocaleDateString()}</span>
-
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+            <span className="font-medium text-slate-700">
+              {food.quantity} {food.unit}
+            </span>
+            <span className="flex items-center gap-1">
+              <MapPin size={12} />
+              {food.storageLocation || "Pantry"}
+            </span>
+            <span className="flex items-center gap-1">
+              <CalendarDays size={12} />
+              Exp:{" "}
+              {food.expiryDate
+                ? new Date(food.expiryDate).toLocaleDateString()
+                : "Not set"}
+            </span>
           </div>
-
         </div>
-
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:border-0 sm:pt-0 sm:justify-end">
-
-        <span className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold ring-1 ${badgeConfig[status] || badgeConfig.safe}`}>
-
-          <span className="relative flex h-1.5 w-1.5">
-
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-70" />
-
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-current" />
-
-          </span>
-
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:justify-end sm:border-0 sm:pt-0">
+        <span
+          className={`rounded-xl border px-3 py-1.5 text-xs font-semibold ${
+            badgeStyles[status] || badgeStyles.safe
+          }`}
+        >
           {label}
-
         </span>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onConsume}
+            title="Mark as consumed"
+            className="rounded-lg border border-slate-200 p-2.5 text-slate-500 transition hover:bg-cyan-50 hover:text-cyan-700"
+          >
+            <CheckCircle2 size={16} />
+          </button>
 
-          <button type="button" onClick={onConsume} title="Mark as consumed" aria-label={`Mark ${food.name} as consumed`} className="rounded-lg border border-slate-200 bg-white p-2.5 text-slate-500 transition-all duration-200 hover:border-cyan-500/30 hover:bg-cyan-50 hover:text-cyan-700"><CheckCircle2 size={15} /></button>
+          <button
+            type="button"
+            onClick={onEdit}
+            title="Edit food"
+            className="rounded-lg border border-slate-200 p-2.5 text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700"
+          >
+            <Pencil size={16} />
+          </button>
 
-          <button type="button" onClick={onEdit} title="Edit food item" aria-label={`Edit ${food.name}`} className="rounded-lg border border-slate-200 bg-white p-2.5 text-slate-500 transition-all duration-200 hover:border-emerald-500/30 hover:bg-emerald-50 hover:text-emerald-700"><Pencil size={15} /></button>
-
-          <button type="button" onClick={onDelete} title="Delete food item" aria-label={`Delete ${food.name}`} className="rounded-lg border border-slate-200 bg-white p-2.5 text-slate-500 transition-all duration-200 hover:border-rose-500/30 hover:bg-rose-50 hover:text-rose-700"><Trash2 size={15} /></button>
-
+          <button
+            type="button"
+            onClick={onDelete}
+            title="Delete food"
+            className="rounded-lg border border-slate-200 p-2.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
-
       </div>
-
     </div>
-
   );
-
 }
 
-
-
-function App() {
-
+function Dashboard({ user, onLogout }) {
   const [foods, setFoods] = useState([]);
-
   const [loading, setLoading] = useState(true);
-
   const [saving, setSaving] = useState(false);
-
   const [error, setError] = useState("");
-
   const [notice, setNotice] = useState("");
-
   const [showModal, setShowModal] = useState(false);
-
   const [editingFood, setEditingFood] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
-
   const [search, setSearch] = useState("");
-
   const [activeView, setActiveView] = useState("Dashboard");
-
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
 
-
-
   async function loadFoods() {
-
     setLoading(true);
-
     setError("");
 
     try {
-
       const data = await getFoods();
-
       setFoods(Array.isArray(data) ? data : []);
-
     } catch (err) {
-
-      setError(err.message || "Could not load food items. Check that the backend is running.");
-
+      setError(
+        err.message ||
+          "Could not load food items. Check that the backend is running."
+      );
     } finally {
-
       setLoading(false);
-
     }
-
   }
 
+  useEffect(() => {
+    loadFoods();
+  }, []);
 
-
-  useEffect(() => { loadFoods(); }, []);
-
-
+  const activeFoods = useMemo(
+    () => foods.filter((food) => !food.consumed),
+    [foods]
+  );
 
   const stats = useMemo(() => {
+    const expiring = activeFoods.filter((food) => {
+      const days = getExpiryInfo(food.expiryDate).days;
+      return days >= 0 && days <= 7;
+    });
 
-    const activeFoods = foods.filter((food) => !food.consumed);
+    const expired = activeFoods.filter(
+      (food) => getExpiryInfo(food.expiryDate).days < 0
+    );
 
-    const expiring = activeFoods.filter((food) => { const { days } = getExpiryInfo(food.expiryDate); return days >= 0 && days <= 7; });
+    return {
+      total: activeFoods.length,
+      expiring: expiring.length,
+      expired: expired.length,
+      consumed: foods.filter((food) => food.consumed).length,
+    };
+  }, [foods, activeFoods]);
 
-    const expired = activeFoods.filter((food) => getExpiryInfo(food.expiryDate).days < 0);
-
-    return { total: activeFoods.length, expiring: expiring.length, expired: expired.length, consumed: foods.filter((food) => food.consumed).length };
-
-  }, [foods]);
-
-  // In-app expiry reminders: active items expiring within 7 days, plus expired items.
-  const expiryReminders = useMemo(() => {
-    return foods
-      .filter((food) => !food.consumed && food.expiryDate)
-      .map((food) => ({ ...food, expiryInfo: getExpiryInfo(food.expiryDate) }))
-      .filter((food) => food.expiryInfo.days <= 7)
-      .sort((a, b) => a.expiryInfo.days - b.expiryInfo.days);
-  }, [foods]);
-
-  const reminderCount = expiryReminders.length;
+  const expiryReminders = useMemo(
+    () =>
+      activeFoods
+        .filter((food) => food.expiryDate)
+        .map((food) => ({
+          ...food,
+          expiryInfo: getExpiryInfo(food.expiryDate),
+        }))
+        .filter((food) => food.expiryInfo.days <= 7)
+        .sort((a, b) => a.expiryInfo.days - b.expiryInfo.days),
+    [activeFoods]
+  );
 
   const filteredFoods = useMemo(() => {
+    const query = search.trim().toLowerCase();
 
     let result = foods.filter((food) => {
+      const matchesSearch =
+        (food.name || "").toLowerCase().includes(query) ||
+        (food.category || "").toLowerCase().includes(query);
 
-      const query = search.trim().toLowerCase();
+      if (activeView === "Consumed") {
+        return food.consumed && matchesSearch;
+      }
 
-      return (food.name || "").toLowerCase().includes(query) || (food.category || "").toLowerCase().includes(query);
-
+      return !food.consumed && matchesSearch;
     });
 
-    if (activeView === "Expiring Soon") result = result.filter((food) => !food.consumed && getExpiryInfo(food.expiryDate).days >= 0 && getExpiryInfo(food.expiryDate).days <= 7);
+    if (activeView === "Expiring Soon") {
+      result = result.filter((food) => {
+        const days = getExpiryInfo(food.expiryDate).days;
+        return days >= 0 && days <= 7;
+      });
+    } else if (activeView === "Food Waste") {
+      result = result.filter(
+        (food) => getExpiryInfo(food.expiryDate).days < 0
+      );
+    }
 
-    else if (activeView === "Food Waste") result = result.filter((food) => !food.consumed && getExpiryInfo(food.expiryDate).days < 0);
-
-    else result = result.filter((food) => !food.consumed);
-
-    return result.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-
+    return result.sort(
+      (a, b) =>
+        new Date(a.expiryDate || "9999-12-31") -
+        new Date(b.expiryDate || "9999-12-31")
+    );
   }, [foods, search, activeView]);
 
-
-
   function openAddModal() {
-
-    setError(""); setNotice(""); setEditingFood(null);
-
+    setError("");
+    setNotice("");
+    setEditingFood(null);
     setForm({ ...initialForm, purchaseDate: todayString() });
-
     setShowModal(true);
-
   }
 
-
-
   function handleEditFood(food) {
-
-    setError(""); setNotice(""); setEditingFood(food);
+    setError("");
+    setNotice("");
+    setEditingFood(food);
 
     setForm({
-
-      name: food.name || "", category: food.category || "Other", quantity: String(food.quantity ?? 1),
-
-      unit: food.unit || "pieces", purchaseDate: dateInputValue(food.purchaseDate) || todayString(),
-
-      expiryDate: dateInputValue(food.expiryDate), storageLocation: food.storageLocation || "Refrigerator", notes: food.notes || "",
-
+      name: food.name || "",
+      category: food.category || "Other",
+      quantity: String(food.quantity ?? 1),
+      unit: food.unit || "pieces",
+      purchaseDate: dateInputValue(food.purchaseDate) || todayString(),
+      expiryDate: dateInputValue(food.expiryDate),
+      storageLocation: food.storageLocation || "Refrigerator",
+      notes: food.notes || "",
     });
 
     setShowModal(true);
-
   }
 
-
-
   async function handleSaveFood(event) {
+    event.preventDefault();
+    setError("");
+    setNotice("");
 
-    event.preventDefault(); setError(""); setNotice("");
+    if (!form.name.trim()) {
+      setError("Please enter the food name.");
+      return;
+    }
 
-    if (new Date(form.expiryDate) < new Date(form.purchaseDate)) { setError("Expiry date cannot be earlier than the purchase date."); return; }
+    if (!form.expiryDate) {
+      setError("Please select an expiry date.");
+      return;
+    }
+
+    const quantity = Number(form.quantity);
+
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      setError("Quantity must be greater than zero.");
+      return;
+    }
+
+    const payload = {
+      ...form,
+      name: form.name.trim(),
+      quantity,
+      consumed: editingFood ? Boolean(editingFood.consumed) : false,
+    };
 
     setSaving(true);
 
     try {
+      if (editingFood) {
+        await updateFood(editingFood._id, payload);
+        setNotice("Food item updated successfully.");
+      } else {
+        await addFood(payload);
+        setNotice("Food item added successfully.");
+      }
 
-      const foodData = { ...form, quantity: Number(form.quantity) };
-
-      if (editingFood) await updateFood(editingFood._id, foodData);
-
-      else await addFood(foodData);
-
-      const wasEditing = Boolean(editingFood);
-
-      setForm({ ...initialForm, purchaseDate: todayString() });
-
-      setShowModal(false); setEditingFood(null);
-
-      setNotice(wasEditing ? "Food item updated successfully." : "Food item added successfully.");
-
+      setShowModal(false);
+      setEditingFood(null);
+      setForm(initialForm);
       await loadFoods();
-
     } catch (err) {
-
-      setError(err.message || (editingFood ? "Could not save changes." : "Could not add food item."));
-
+      setError(err.message || "Could not save the food item.");
     } finally {
-
       setSaving(false);
-
     }
-
   }
 
+  async function handleDeleteFood(food) {
+    const confirmed = window.confirm(
+      `Delete "${food.name}" from your inventory?`
+    );
 
+    if (!confirmed) return;
+
+    setError("");
+    setNotice("");
+
+    try {
+      await deleteFood(food._id);
+      setFoods((current) =>
+        current.filter((item) => item._id !== food._id)
+      );
+      setNotice(`${food.name} deleted successfully.`);
+    } catch (err) {
+      setError(err.message || "Could not delete the food item.");
+    }
+  }
 
   async function handleConsumeFood(food) {
-    if (!window.confirm(`Mark ${food.name} as consumed?`)) return;
-    setError(""); setNotice("");
+    setError("");
+    setNotice("");
+
     try {
       await updateFood(food._id, { consumed: true });
-      setNotice(`${food.name} marked as consumed. Nice work reducing food waste!`);
-      await loadFoods();
+
+      setFoods((current) =>
+        current.map((item) =>
+          item._id === food._id ? { ...item, consumed: true } : item
+        )
+      );
+
+      setNotice(`${food.name} marked as consumed.`);
     } catch (err) {
-      setError(err.message || "Could not mark this food as consumed.");
+      setError(err.message || "Could not update the food item.");
     }
   }
 
-  async function handleDeleteFood(id) {
-
-    if (!window.confirm("Delete this food item?")) return;
-
-    setError(""); setNotice("");
-
-    try {
-
-      await deleteFood(id);
-
-      setNotice("Food item deleted.");
-
-      await loadFoods();
-
-    } catch (err) {
-
-      setError(err.message || "Could not delete food item.");
-
-    }
-
-  }
-
-
+  const navigation = [
+    { name: "Dashboard", icon: LayoutDashboard },
+    { name: "Expiring Soon", icon: Clock3 },
+    { name: "Food Waste", icon: Trash2 },
+    { name: "Consumed", icon: CheckCircle2 },
+  ];
 
   return (
+    <div className="min-h-screen bg-slate-50 text-slate-800">
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-slate-950/30 md:hidden"
+        />
+      )}
 
-    <div className="relative min-h-screen bg-[#f6f8f5] text-slate-800 font-sans antialiased overflow-x-hidden">
-
-      {/* Soft background accents */}
-
-      
-
-
-
-      <div className="relative z-10 flex min-h-screen">
-
-        {/* Primary navigation */}
-
-        <aside className="hidden w-72 border-r border-slate-200/80 bg-white p-6 shadow-sm md:flex flex-col justify-between">
-
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform duration-200 md:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex h-20 items-center gap-3 border-b border-slate-100 px-6">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white">
+            <Leaf size={24} />
+          </div>
           <div>
-
-            <div className="flex items-center gap-3 px-2 mb-10 group">
-
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600 shadow-sm transition-transform duration-500 group-hover:rotate-12">
-
-                <Leaf className="text-white h-5 w-5 fill-white" />
-
-              </div>
-
-              <div>
-
-                <span className="text-lg font-extrabold tracking-tight text-slate-900 uppercase block">FoodGuard</span>
-
-                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.16em] block -mt-0.5">Food Inventory</span>
-
-              </div>
-
-            </div>
-
-
-
-            <nav className="space-y-1.5">
-
-              {[
-
-                { id: "Dashboard", icon: <LayoutDashboard size={18} /> },
-
-                { id: "Inventory", icon: <Package size={18} /> },
-
-                { id: "Expiring Soon", icon: <Clock3 size={18} /> },
-
-                { id: "Food Waste", icon: <Trash2 size={18} /> },
-
-              ].map((item) => (
-
-                <button
-
-                  key={item.id}
-
-                  onClick={() => setActiveView(item.id)}
-
-                  className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group ${
-
-                    activeView === item.id
-
-                      ? "bg-emerald-50 text-emerald-800 border-l-2 border-emerald-600 px-5"
-
-                      : "text-slate-400 hover:bg-slate-50 hover:text-slate-900"
-
-                  }`}
-
-                >
-
-                  <div className="flex items-center gap-3.5">
-
-                    {item.icon}
-
-                    <span>{item.id}</span>
-
-                  </div>
-
-                  <ChevronRight size={14} className={`opacity-0 -translate-x-2 transition-all duration-300 ${activeView === item.id ? "opacity-100 translate-x-0" : "group-hover:opacity-40"}`} />
-
-                </button>
-
-              ))}
-
-            </nav>
-
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">
+              FoodGuard
+            </h1>
+            <p className="text-xs text-slate-500">Waste less. Save more.</p>
           </div>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="ml-auto rounded-lg p-2 md:hidden"
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
+        <div className="px-4 py-6">
+          <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+            Workspace
+          </p>
 
-
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-
-            <div className="flex items-center gap-3">
-
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-
-              <p className="text-xs font-semibold tracking-wide text-slate-700">Your inventory is ready</p>
-
-            </div>
-
-            <p className="text-[10px] text-slate-500 font-medium mt-1">Everything you have, in one place</p>
-
-          </div>
-
-        </aside>
-
-
-
-        {/* Primary Workspace */}
-
-        <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-8 lg:p-10 max-w-[1600px] mx-auto w-full">
-          <nav aria-label="Main navigation" className="mb-6 grid grid-cols-4 gap-2 md:hidden">
-            {[
-              { id: "Dashboard", icon: <LayoutDashboard size={16} /> },
-              { id: "Inventory", icon: <Package size={16} /> },
-              { id: "Expiring Soon", icon: <Clock3 size={16} /> },
-              { id: "Food Waste", icon: <Trash2 size={16} /> },
-            ].map((item) => (
-              <button key={item.id} type="button" onClick={() => setActiveView(item.id)} className={`flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-xl border px-1 py-2 text-[10px] font-semibold transition-colors ${activeView === item.id ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-400 hover:bg-slate-50"}`}>
-                {item.icon}<span>{item.id}</span>
+          <nav className="space-y-1">
+            {navigation.map(({ name, icon: Icon }) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => {
+                  setActiveView(name);
+                  setSidebarOpen(false);
+                  setError("");
+                }}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
+                  activeView === name
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                <Icon size={18} />
+                {name}
+                {name === "Expiring Soon" && stats.expiring > 0 && (
+                  <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+                    {stats.expiring}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
-
-          <header className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between mb-10">
-
-            <div>
-
-              <div className="flex items-center gap-2 text-xs font-bold tracking-[0.16em] text-emerald-700 uppercase mb-2">
-
-                <Sparkles size={12} /> YOUR KITCHEN, ORGANIZED
-
-              </div>
-
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{activeView}</h1>
-
-              <p className="text-sm text-slate-400 mt-2">Keep track of what you have and use it before it expires.</p>
-
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowNotifications((open) => !open)}
-                  aria-label={`Expiry notifications${reminderCount ? `, ${reminderCount} alerts` : ""}`}
-                  title="Expiry reminders"
-                  className="relative flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
-                >
-                  <Bell size={19} />
-                  {reminderCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{reminderCount > 99 ? "99+" : reminderCount}</span>}
-                </button>
-                {showNotifications && (
-                  <div className="absolute right-0 z-40 mt-3 w-[min(88vw,360px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                    <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                      <div><p className="text-sm font-bold text-slate-900">Expiry reminders</p><p className="mt-0.5 text-xs text-slate-500">Items needing your attention</p></div>
-                      <button type="button" onClick={() => setShowNotifications(false)} aria-label="Close reminders" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X size={16} /></button>
-                    </div>
-                    <div className="max-h-80 overflow-y-auto p-2">
-                      {expiryReminders.length === 0 ? (
-                        <div className="px-4 py-8 text-center"><CheckCircle2 className="mx-auto mb-2 text-emerald-600" size={25} /><p className="text-sm font-semibold text-slate-800">You’re all caught up</p><p className="mt-1 text-xs text-slate-500">No expired or soon-to-expire items.</p></div>
-                      ) : expiryReminders.map((food) => {
-                        const expired = food.expiryInfo.days < 0;
-                        return (
-                          <button key={food._id} type="button" onClick={() => { setActiveView(expired ? "Food Waste" : "Expiring Soon"); setShowNotifications(false); }} className="flex w-full items-start gap-3 rounded-xl p-3 text-left transition hover:bg-slate-50">
-                            <span className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${expired ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-700"}`}><AlertTriangle size={17} /></span>
-                            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-slate-800">{food.name}</span><span className="mt-0.5 block text-xs text-slate-500">{food.quantity} {food.unit} · {food.expiryInfo.label}</span></span>
-                            <ChevronRight size={16} className="mt-1 shrink-0 text-slate-400" />
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {reminderCount > 0 && <button type="button" onClick={() => { setActiveView("Expiring Soon"); setShowNotifications(false); }} className="w-full border-t border-slate-100 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">View expiring items</button>}
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={openAddModal}
-                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-emerald-700 hover:shadow-md active:scale-[0.98]"
-              >
-                <Plus size={16} strokeWidth={3} /> Add food item
-              </button>
-            </div>
-
-          </header>
-
-
-
-          {/* Status messages */}
-
-          {notice && (
-
-            <div className="mb-6 flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 shadow-sm">
-
-              <div className="flex items-center gap-3">
-
-                <CheckCircle2 size={18} />
-
-                <span className="font-medium tracking-wide">{notice}</span>
-
-              </div>
-
-              <button onClick={() => setNotice("")} className="text-emerald-700 hover:text-emerald-900 p-1.5 rounded-xl hover:bg-emerald-100 transition-all">
-
-                <X size={16} />
-
-              </button>
-
-            </div>
-
-          )}
-
-
-
-          {error && (
-
-            <div className="mb-6 flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-sm">
-
-              <div className="flex items-center gap-3">
-
-                <AlertTriangle size={18} />
-
-                <span className="font-medium tracking-wide">{error}</span>
-
-              </div>
-
-              <button onClick={() => setError("")} className="text-rose-600 hover:text-rose-800 p-1.5 rounded-xl hover:bg-rose-100 transition-all">
-
-                <X size={16} />
-
-              </button>
-
-            </div>
-
-          )}
-
-
-
-          {/* Inventory overview */}
-
-          <section className="mb-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-
-            <StatCard title="Total items" value={stats.total} description="Food items you are tracking" icon={<Package size={18} />} type="safe" />
-
-            <StatCard title="Expiring soon" value={stats.expiring} description="Expiry within the next 7 days" icon={<Clock3 size={18} />} type="warning" />
-
-            <StatCard title="Expired" value={stats.expired} description="Items past their expiry date" icon={<Trash2 size={18} />} type="danger" />
-
-            <StatCard title="Consumed" value={stats.consumed} description="Items marked as consumed" icon={<CheckCircle2 size={18} />} type="safe" />
-
-          </section>
-
-
-
-          {/* Search and refresh */}
-
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-
-            <div className="relative flex-1 group">
-
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-emerald-700" />
-
-              <input
-
-                type="text"
-
-                placeholder="Search food by name or category..."
-
-                value={search}
-
-                onChange={(e) => setSearch(e.target.value)}
-
-                className="w-full rounded-2xl border border-slate-200 bg-white pl-12 pr-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 shadow-sm"
-
-              />
-
-            </div>
-
-            <button
-
-              onClick={loadFoods}
-
-              disabled={loading}
-
-              className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40"
-
-            >
-
-              <RefreshCw size={16} className={loading ? "animate-spin text-emerald-700" : ""} />
-
-            </button>
-
-          </div>
-
-
-
-          {/* Food inventory list */}
-
-          <section className="space-y-3">
-
-            {loading ? (
-
-              <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-4">
-
-                <LoaderCircle className="animate-spin text-emerald-700" size={36} />
-
-                <p className="text-sm font-semibold tracking-wider uppercase text-slate-400 animate-pulse">Loading your inventory...</p>
-
-              </div>
-
-            ) : filteredFoods.length === 0 ? (
-
-              <div className="text-center py-20 rounded-2xl border border-dashed border-slate-300 bg-white">
-
-                <Package className="mx-auto text-slate-300 mb-4" size={48} />
-
-                <p className="text-slate-800 font-semibold tracking-tight text-lg">Your inventory is empty</p>
-
-                <p className="text-xs text-slate-400 mt-1.5 max-w-xs mx-auto">Add your first food item to start tracking expiry dates.</p>
-
-              </div>
-
-            ) : (
-
-              filteredFoods.map((food) => (
-
-                <FoodRow
-
-                  key={food._id}
-
-                  food={food}
-
-                  onEdit={() => handleEditFood(food)}
-
-                  onDelete={() => handleDeleteFood(food._id)}
-
-                />
-
-              ))
-
-            )}
-
-          </section>
-
-        </main>
-
-      </div>
-
-
-
-      {/* Add and edit food dialog */}
-
-      {showModal && (
-
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm animate-fade-in">
-
-          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-
-            <button
-
-              onClick={() => { setShowModal(false); setEditingFood(null); }}
-
-              className="absolute top-5 right-5 rounded-xl p-2 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900"
-
-            >
-
-              <X size={18} />
-
-            </button>
-
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1">{editingFood ? "Edit food item" : "Add food item"}</h2>
-
-
-
-            <form onSubmit={handleSaveFood} className="space-y-5">
-
-              <FormField label="Food name">
-
-                <input
-
-                  type="text"
-
-                  required
-
-                  placeholder="e.g. Fresh spinach"
-
-                  value={form.name}
-
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-
-                  className={inputClass}
-
-                />
-
-              </FormField>
-
-
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-
-                <FormField label="Category">
-
-                  <select
-
-                    value={form.category}
-
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-
-                    className={inputClass}
-
-                  >
-
-                    {["Vegetables", "Fruits", "Dairy", "Bakery", "Meat", "Seafood", "Grains", "Beverages", "Frozen", "Other"].map((cat) => (
-
-                      <option key={cat} value={cat} className="bg-white text-slate-800">{cat}</option>
-
-                    ))}
-
-                  </select>
-
-                </FormField>
-
-                <div className="grid grid-cols-2 gap-3">
-
-                  <FormField label="Quantity">
-
-                    <input
-
-                      type="number"
-
-                      min="1"
-
-                      required
-
-                      value={form.quantity}
-
-                      onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-
-                      className={inputClass}
-
-                    />
-
-                  </FormField>
-
-                  <FormField label="Unit">
-
-                    <input
-
-                      type="text"
-
-                      placeholder="crates, kg, pcs"
-
-                      value={form.unit}
-
-                      onChange={(e) => setForm({ ...form, unit: e.target.value })}
-
-                      className={inputClass}
-
-                    />
-
-                  </FormField>
-
-                </div>
-
-              </div>
-
-
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-
-                <FormField label="Purchase date">
-
-                  <input
-
-                    type="date"
-
-                    required
-
-                    value={form.purchaseDate}
-
-                    onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
-
-                    className={inputClass}
-
-                  />
-
-                </FormField>
-
-                <FormField label="Expiry date">
-
-                  <input
-
-                    type="date"
-
-                    required
-
-                    value={form.expiryDate}
-
-                    onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
-
-                    className={inputClass}
-
-                  />
-
-                </FormField>
-
-              </div>
-
-
-
-              <FormField label="Storage location">
-
-                <select
-
-                  value={form.storageLocation}
-
-                  onChange={(e) => setForm({ ...form, storageLocation: e.target.value })}
-
-                  className={inputClass}
-
-                >
-
-                  {["Refrigerator", "Freezer", "Pantry", "Countertop"].map((loc) => (
-
-                    <option key={loc} value={loc} className="bg-white text-slate-800">{loc}</option>
-
-                  ))}
-
-                </select>
-
-              </FormField>
-
-
-
-              <FormField label="Notes (optional)">
-
-                <textarea
-
-                  placeholder="Add a note about this food..."
-
-                  rows={2}
-
-                  value={form.notes}
-
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-
-                  className={`${inputClass} resize-none`}
-
-                />
-
-              </FormField>
-
-
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-
-                <button
-
-                  type="button"
-
-                  onClick={() => { setShowModal(false); setEditingFood(null); }}
-
-                  className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900"
-
-                >
-
-                  Cancel
-
-                </button>
-
-                <button
-
-                  type="submit"
-
-                  disabled={saving}
-
-                  className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-slate-900 transition-all duration-200 hover:bg-emerald-700 disabled:opacity-50"
-
-                >
-
-                  {saving && <LoaderCircle className="animate-spin" size={16} />}
-
-                  {editingFood ? "Save changes" : "Save food item"}
-
-                </button>
-
-              </div>
-
-            </form>
-
-          </div>
-
         </div>
 
+        <div className="mt-auto p-4">
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+            <div className="mb-2 flex items-center gap-2 text-emerald-700">
+              <Sparkles size={17} />
+              <span className="text-sm font-semibold">FoodGuard tip</span>
+            </div>
+            <p className="text-xs leading-5 text-emerald-800">
+              Use food that expires first before opening newer items.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onLogout}
+            className="mt-4 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
+          >
+            <LogOut size={18} />
+            Log out
+          </button>
+        </div>
+      </aside>
+
+      <main className="min-h-screen md:ml-64">
+        <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur-xl sm:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="rounded-xl border border-slate-200 p-2 md:hidden"
+              aria-label="Open menu"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-bold text-slate-900 sm:text-xl">
+                {activeView}
+              </h2>
+              <p className="hidden text-xs text-slate-500 sm:block">
+                Manage your food inventory smartly.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setShowNotifications((value) => !value)}
+              className="relative rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700"
+              aria-label="Expiry notifications"
+            >
+              <Bell size={19} />
+              {expiryReminders.length > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                  {expiryReminders.length}
+                </span>
+              )}
+            </button>
+
+            <div className="hidden text-right sm:block">
+              <p className="max-w-36 truncate text-sm font-semibold text-slate-800">
+                {user?.name || user?.email || "FoodGuard User"}
+              </p>
+              <p className="text-xs text-slate-500">Your inventory</p>
+            </div>
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 font-bold text-emerald-700">
+              {(user?.name || user?.email || "F").charAt(0).toUpperCase()}
+            </div>
+          </div>
+
+          {showNotifications && (
+            <div className="absolute right-4 top-16 z-50 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl sm:right-8">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="font-semibold text-slate-900">
+                  Expiry reminders
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowNotifications(false)}
+                  aria-label="Close notifications"
+                  className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
+                >
+                  <X size={17} />
+                </button>
+              </div>
+
+              {expiryReminders.length === 0 ? (
+                <p className="py-4 text-sm text-slate-500">
+                  No upcoming expiry reminders.
+                </p>
+              ) : (
+                <div className="max-h-72 space-y-2 overflow-y-auto">
+                  {expiryReminders.map((food) => (
+                    <div
+                      key={food._id}
+                      className="rounded-xl border border-slate-100 bg-slate-50 p-3"
+                    >
+                      <p className="text-sm font-semibold text-slate-800">
+                        {food.name}
+                      </p>
+                      <p className="mt-1 text-xs text-rose-600">
+                        {food.expiryInfo.label}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </header>
+
+        <div className="mx-auto max-w-7xl space-y-7 p-4 sm:p-8">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div>
+              <p className="text-sm text-slate-500">
+                Welcome back{user?.name ? `, ${user.name}` : ""} 👋
+              </p>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                Let's reduce food waste.
+              </h1>
+              <p className="mt-2 text-sm text-slate-500">
+                Keep track of your food and expiry dates in one place.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={loadFoods}
+                disabled={loading}
+                className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
+              >
+                <RefreshCw
+                  size={16}
+                  className={loading ? "animate-spin" : ""}
+                />
+                Refresh
+              </button>
+
+              <button
+                type="button"
+                onClick={openAddModal}
+                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+              >
+                <Plus size={17} />
+                Add food
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+              <AlertTriangle size={19} className="mt-0.5 shrink-0" />
+              <div className="flex-1">{error}</div>
+              <button
+                type="button"
+                onClick={() => setError("")}
+                aria-label="Dismiss error"
+              >
+                <X size={17} />
+              </button>
+            </div>
+          )}
+
+          {notice && (
+            <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+              <CheckCircle2 size={19} />
+              <span className="flex-1">{notice}</span>
+              <button
+                type="button"
+                onClick={() => setNotice("")}
+                aria-label="Dismiss message"
+              >
+                <X size={17} />
+              </button>
+            </div>
+          )}
+
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              title="Active food items"
+              value={stats.total}
+              description="Items in your inventory"
+              icon={<Package size={21} />}
+            />
+            <StatCard
+              title="Expiring soon"
+              value={stats.expiring}
+              description="Expiring within 7 days"
+              type="warning"
+              icon={<Clock3 size={21} />}
+            />
+            <StatCard
+              title="Expired items"
+              value={stats.expired}
+              description="Need your attention"
+              type="danger"
+              icon={<AlertTriangle size={21} />}
+            />
+            <StatCard
+              title="Items consumed"
+              value={stats.consumed}
+              description="Food marked as consumed"
+              icon={<CheckCircle2 size={21} />}
+            />
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+            <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  {activeView === "Dashboard"
+                    ? "Food inventory"
+                    : activeView}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  {filteredFoods.length} item
+                  {filteredFoods.length === 1 ? "" : "s"} found
+                </p>
+              </div>
+
+              <div className="relative w-full sm:max-w-xs">
+                <Search
+                  size={17}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search food or category..."
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:bg-white"
+                />
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-500">
+                <LoaderCircle
+                  size={30}
+                  className="animate-spin text-emerald-600"
+                />
+                <p className="text-sm">Loading your food inventory...</p>
+              </div>
+            ) : filteredFoods.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-14 text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                  <Package size={26} />
+                </div>
+                <h4 className="font-semibold text-slate-900">
+                  {activeView === "Consumed"
+                    ? "No consumed items yet"
+                    : search
+                      ? "No matching food found"
+                      : "Your inventory is empty"}
+                </h4>
+                <p className="mt-2 max-w-sm text-sm text-slate-500">
+                  {search
+                    ? "Try another food name or category."
+                    : "Add your first food item to start tracking expiry dates."}
+                </p>
+                {!search && activeView !== "Consumed" && (
+                  <button
+                    type="button"
+                    onClick={openAddModal}
+                    className="mt-5 flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+                  >
+                    <Plus size={16} />
+                    Add your first food
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredFoods.map((food) => (
+                  <FoodRow
+                    key={food._id}
+                    food={food}
+                    onEdit={() => handleEditFood(food)}
+                    onDelete={() => handleDeleteFood(food)}
+                    onConsume={() => handleConsumeFood(food)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <footer className="flex flex-col justify-between gap-2 pb-2 text-xs text-slate-400 sm:flex-row">
+            <p>FoodGuard — Waste less. Save more.</p>
+            <p>Helping you manage food responsibly 🌱</p>
+          </footer>
+        </div>
+      </main>
+
+      {showModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !saving) {
+              setShowModal(false);
+            }
+          }}
+        >
+          <div className="my-auto w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-5 sm:px-7">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">
+                  {editingFood ? "Edit food item" : "Add food item"}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Enter the details of your food.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setShowModal(false)}
+                aria-label="Close form"
+                className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+              >
+                <X size={19} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveFood} className="space-y-5 p-5 sm:p-7">
+              {error && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                  {error}
+                </div>
+              )}
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <FormField label="Food name *">
+                  <input
+                    required
+                    maxLength={100}
+                    className={inputClass}
+                    placeholder="e.g. Tomatoes"
+                    value={form.name}
+                    onChange={(event) =>
+                      setForm({ ...form, name: event.target.value })
+                    }
+                  />
+                </FormField>
+
+                <FormField label="Category *">
+                  <select
+                    required
+                    className={inputClass}
+                    value={form.category}
+                    onChange={(event) =>
+                      setForm({ ...form, category: event.target.value })
+                    }
+                  >
+                    {[
+                      "Vegetables",
+                      "Fruits",
+                      "Dairy",
+                      "Bakery",
+                      "Meat",
+                      "Seafood",
+                      "Grains",
+                      "Beverages",
+                      "Frozen",
+                      "Other",
+                    ].map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Quantity *">
+                  <input
+                    required
+                    type="number"
+                    min="0.01"
+                    step="any"
+                    className={inputClass}
+                    value={form.quantity}
+                    onChange={(event) =>
+                      setForm({ ...form, quantity: event.target.value })
+                    }
+                  />
+                </FormField>
+
+                <FormField label="Unit *">
+                  <select
+                    required
+                    className={inputClass}
+                    value={form.unit}
+                    onChange={(event) =>
+                      setForm({ ...form, unit: event.target.value })
+                    }
+                  >
+                    {[
+                      "pieces",
+                      "kg",
+                      "g",
+                      "litres",
+                      "ml",
+                      "packets",
+                      "dozen",
+                    ].map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Purchase date">
+                  <input
+                    type="date"
+                    className={inputClass}
+                    value={form.purchaseDate}
+                    onChange={(event) =>
+                      setForm({ ...form, purchaseDate: event.target.value })
+                    }
+                  />
+                </FormField>
+
+                <FormField label="Expiry date *">
+                  <input
+                    required
+                    type="date"
+                    className={inputClass}
+                    value={form.expiryDate}
+                    onChange={(event) =>
+                      setForm({ ...form, expiryDate: event.target.value })
+                    }
+                  />
+                </FormField>
+
+                <FormField label="Storage location">
+                  <select
+                    className={inputClass}
+                    value={form.storageLocation}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        storageLocation: event.target.value,
+                      })
+                    }
+                  >
+                    {[
+                      "Refrigerator",
+                      "Freezer",
+                      "Pantry",
+                      "Kitchen shelf",
+                      "Other",
+                    ].map((location) => (
+                      <option key={location} value={location}>
+                        {location}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Notes">
+                  <input
+                    maxLength={500}
+                    className={inputClass}
+                    placeholder="Optional notes"
+                    value={form.notes}
+                    onChange={(event) =>
+                      setForm({ ...form, notes: event.target.value })
+                    }
+                  />
+                </FormField>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setShowModal(false)}
+                  className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  {saving && <LoaderCircle size={16} className="animate-spin" />}
+                  {saving
+                    ? "Saving..."
+                    : editingFood
+                      ? "Save changes"
+                      : "Add food"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
-
     </div>
-
   );
-
 }
 
+export default function App() {
+  const [session, setSession] = useState(() => {
+    try {
+      const token = sessionStorage.getItem("foodguard_token");
+      const savedUser = sessionStorage.getItem("foodguard_user");
 
+      if (!token || !savedUser) return null;
 
-export default App;
+      return {
+        token,
+        user: JSON.parse(savedUser),
+      };
+    } catch {
+      sessionStorage.removeItem("foodguard_token");
+      sessionStorage.removeItem("foodguard_user");
+      return null;
+    }
+  });
+
+  function handleLogin(result) {
+    const token = result?.token;
+    const user = result?.user;
+
+    if (!token || !user) {
+      throw new Error("Login response did not contain a token and user.");
+    }
+
+    sessionStorage.setItem("foodguard_token", token);
+    sessionStorage.setItem("foodguard_user", JSON.stringify(user));
+
+    setSession({ token, user });
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem("foodguard_token");
+    sessionStorage.removeItem("foodguard_user");
+    setSession(null);
+  }
+
+  useEffect(() => {
+    const handleExpiredSession = () => {
+      handleLogout();
+    };
+
+    window.addEventListener("foodguard:logout", handleExpiredSession);
+
+    return () => {
+      window.removeEventListener("foodguard:logout", handleExpiredSession);
+    };
+  }, []);
+
+  if (!session) {
+    return <AuthPage onLogin={handleLogin} />;
+  }
+
+  return (
+    <Dashboard
+      user={session.user}
+      onLogout={handleLogout}
+    />
+  );
+}

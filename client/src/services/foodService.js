@@ -1,58 +1,67 @@
+
 const API_URL = "http://localhost:5000/api/foods";
 
-export async function getFoods() {
-  const response = await fetch(API_URL);
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || "Failed to fetch food items");
-  }
-
-  return result.data;
+function getToken() {
+  return sessionStorage.getItem("foodguard_token");
 }
 
-export async function addFood(food) {
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(food),
+async function foodRequest(url, options = {}) {
+  const token = getToken();
+
+  if (!token) {
+    throw new Error("Please log in to continue.");
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...options.headers,
+      Authorization: `Bearer ${token}`,
+    },
   });
 
   const result = await response.json();
 
-  if (!response.ok) {
-    throw new Error(result.message || "Failed to add food item");
+  if (response.status === 401) {
+    sessionStorage.removeItem("foodguard_token");
+    sessionStorage.removeItem("foodguard_user");
+    window.dispatchEvent(new Event("foodguard:logout"));
+    throw new Error("Session expired. Please log in again.");
   }
+
+  if (!response.ok) {
+    throw new Error(result.message || "Food API request failed.");
+  }
+
+  return result;
+}
+
+export async function getFoods() {
+  const result = await foodRequest(API_URL);
+  return result.data;
+}
+
+export async function addFood(food) {
+  const result = await foodRequest(API_URL, {
+    method: "POST",
+    body: JSON.stringify(food),
+  });
 
   return result.data;
 }
 
 export async function updateFood(id, updates) {
-  const response = await fetch(`${API_URL}/${id}`, {
+  const result = await foodRequest(`${API_URL}/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(updates),
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || "Failed to update food item");
-  }
 
   return result.data;
 }
 
 export async function deleteFood(id) {
-  const response = await fetch(`${API_URL}/${id}`, {
+  return foodRequest(`${API_URL}/${id}`, {
     method: "DELETE",
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || "Failed to delete food item");
-  }
-
-  return result.data;
 }
