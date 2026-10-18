@@ -1,619 +1,43 @@
-
-import { useEffect, useMemo, useState } from "react";
-import {
-  LayoutDashboard,
-  Package,
-  Clock3,
-  Trash2,
-  Leaf,
-  AlertTriangle,
-  CheckCircle2,
-  X,
-  LoaderCircle,
-  RefreshCw,
-  CalendarDays,
-  MapPin,
-  Pencil,
-  Search,
-  Plus,
-  Sparkles,
-  Bell,
-  LogOut,
-  Menu,
-} from "lucide-react";
-
-import AuthPage from "./AuthPage";
-import {
-  getFoods,
-  addFood,
-  updateFood,
-  deleteFood,
-} from "./services/foodService";
-
-const todayString = () => {
-  const date = new Date();
-  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-  return date.toISOString().slice(0, 10);
-};
-
-const initialForm = {
-  name: "",
-  category: "Vegetables",
-  quantity: "1",
-  unit: "pieces",
-  purchaseDate: todayString(),
-  expiryDate: "",
-  storageLocation: "Refrigerator",
-  notes: "",
-};
-
-function dateInputValue(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-  return date.toISOString().slice(0, 10);
-}
-
-function getExpiryInfo(expiryDate) {
-  if (!expiryDate) {
-    return { days: Infinity, status: "safe", label: "No expiry date" };
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const expiry = new Date(expiryDate);
-  expiry.setHours(0, 0, 0, 0);
-
-  if (Number.isNaN(expiry.getTime())) {
-    return { days: Infinity, status: "safe", label: "Unknown expiry" };
-  }
-
-  const days = Math.round((expiry - today) / 86400000);
-
-  if (days < 0) {
-    return {
-      days,
-      status: "danger",
-      label: `Expired ${Math.abs(days)}d ago`,
-    };
-  }
-
-  if (days === 0) {
-    return { days, status: "warning", label: "Expires Today" };
-  }
-
-  if (days <= 7) {
-    return { days, status: "imminent", label: `${days} days left` };
-  }
-
-  return { days, status: "safe", label: `${days} days left` };
-}
-
-const inputClass =
-  "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10";
-
-function FormField({ label, children }) {
-  return (
-    <div className="space-y-2">
-      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-function StatCard({ title, value, description, icon, type = "safe" }) {
-  const styles = {
-    safe: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    warning: "border-amber-200 bg-amber-50 text-amber-700",
-    danger: "border-rose-200 bg-rose-50 text-rose-700",
-  };
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="mb-5 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {title}
-        </p>
-        <div className={`rounded-xl border p-3 ${styles[type]}`}>
-          {icon}
-        </div>
-      </div>
-      <p className="text-3xl font-bold tracking-tight text-slate-900">
-        {value}
-      </p>
-      <p className="mt-2 text-xs text-slate-500">{description}</p>
-    </div>
-  );
-}
-
-function FoodRow({ food, onEdit, onDelete, onConsume }) {
-  const { status, label } = getExpiryInfo(food.expiryDate);
-
-  const badgeStyles = {
-    danger: "border-rose-200 bg-rose-50 text-rose-700",
-    warning: "border-amber-200 bg-amber-50 text-amber-700",
-    imminent: "border-cyan-200 bg-cyan-50 text-cyan-700",
-    safe: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  };
-
-  const emojis = {
-    Dairy: "🥛",
-    Fruits: "🍎",
-    Vegetables: "🥦",
-    Bakery: "🍞",
-    Meat: "🥩",
-    Seafood: "🐟",
-    Grains: "🌾",
-    Beverages: "🧃",
-    Frozen: "🧊",
-  };
-
-  return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-center gap-4">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-2xl">
-          {emojis[food.category] || "📦"}
-        </div>
-
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold text-slate-900">{food.name}</p>
-            <span className="rounded-md border border-slate-200 bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase text-slate-500">
-              {food.category}
-            </span>
-          </div>
-
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-            <span className="font-medium text-slate-700">
-              {food.quantity} {food.unit}
-            </span>
-            <span className="flex items-center gap-1">
-              <MapPin size={12} />
-              {food.storageLocation || "Pantry"}
-            </span>
-            <span className="flex items-center gap-1">
-              <CalendarDays size={12} />
-              Exp:{" "}
-              {food.expiryDate
-                ? new Date(food.expiryDate).toLocaleDateString()
-                : "Not set"}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3 sm:justify-end sm:border-0 sm:pt-0">
-        <span
-          className={`rounded-xl border px-3 py-1.5 text-xs font-semibold ${
-            badgeStyles[status] || badgeStyles.safe
-          }`}
-        >
-          {label}
-        </span>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onConsume}
-            title="Mark as consumed"
-            className="rounded-lg border border-slate-200 p-2.5 text-slate-500 transition hover:bg-cyan-50 hover:text-cyan-700"
-          >
-            <CheckCircle2 size={16} />
-          </button>
-
-          <button
-            type="button"
-            onClick={onEdit}
-            title="Edit food"
-            className="rounded-lg border border-slate-200 p-2.5 text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700"
-          >
-            <Pencil size={16} />
-          </button>
-
-          <button
-            type="button"
-            onClick={onDelete}
-            title="Delete food"
-            className="rounded-lg border border-slate-200 p-2.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Dashboard({ user, onLogout }) {
-  const [foods, setFoods] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [editingFood, setEditingFood] = useState(null);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [search, setSearch] = useState("");
-  const [activeView, setActiveView] = useState("Dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [form, setForm] = useState(initialForm);
-
-  async function loadFoods() {
-    setLoading(true);
-    setError("");
-
-    try {
-      const data = await getFoods();
-      setFoods(Array.isArray(data) ? data : []);
-    } catch (err) {
-      setError(
-        err.message ||
-          "Could not load food items. Check that the backend is running."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadFoods();
-  }, []);
-
-  const activeFoods = useMemo(
-    () => foods.filter((food) => !food.consumed),
-    [foods]
-  );
-
-  const stats = useMemo(() => {
-    const expiring = activeFoods.filter((food) => {
-      const days = getExpiryInfo(food.expiryDate).days;
-      return days >= 0 && days <= 7;
-    });
-
-    const expired = activeFoods.filter(
-      (food) => getExpiryInfo(food.expiryDate).days < 0
-    );
-
-    return {
-      total: activeFoods.length,
-      expiring: expiring.length,
-      expired: expired.length,
-      consumed: foods.filter((food) => food.consumed).length,
-    };
-  }, [foods, activeFoods]);
-
-  const expiryReminders = useMemo(
-    () =>
-      activeFoods
-        .filter((food) => food.expiryDate)
-        .map((food) => ({
-          ...food,
-          expiryInfo: getExpiryInfo(food.expiryDate),
-        }))
-        .filter((food) => food.expiryInfo.days <= 7)
-        .sort((a, b) => a.expiryInfo.days - b.expiryInfo.days),
-    [activeFoods]
-  );
-
-  const filteredFoods = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    let result = foods.filter((food) => {
-      const matchesSearch =
-        (food.name || "").toLowerCase().includes(query) ||
-        (food.category || "").toLowerCase().includes(query);
-
-      if (activeView === "Consumed") {
-        return food.consumed && matchesSearch;
-      }
-
-      return !food.consumed && matchesSearch;
-    });
-
-    if (activeView === "Expiring Soon") {
-      result = result.filter((food) => {
-        const days = getExpiryInfo(food.expiryDate).days;
-        return days >= 0 && days <= 7;
-      });
-    } else if (activeView === "Food Waste") {
-      result = result.filter(
-        (food) => getExpiryInfo(food.expiryDate).days < 0
-      );
-    }
-
-    return result.sort(
-      (a, b) =>
-        new Date(a.expiryDate || "9999-12-31") -
-        new Date(b.expiryDate || "9999-12-31")
-    );
-  }, [foods, search, activeView]);
-
-  function openAddModal() {
-    setError("");
-    setNotice("");
-    setEditingFood(null);
-    setForm({ ...initialForm, purchaseDate: todayString() });
-    setShowModal(true);
-  }
-
-  function handleEditFood(food) {
-    setError("");
-    setNotice("");
-    setEditingFood(food);
-
-    setForm({
-      name: food.name || "",
-      category: food.category || "Other",
-      quantity: String(food.quantity ?? 1),
-      unit: food.unit || "pieces",
-      purchaseDate: dateInputValue(food.purchaseDate) || todayString(),
-      expiryDate: dateInputValue(food.expiryDate),
-      storageLocation: food.storageLocation || "Refrigerator",
-      notes: food.notes || "",
-    });
-
-    setShowModal(true);
-  }
-
-  async function handleSaveFood(event) {
-    event.preventDefault();
-    setError("");
-    setNotice("");
-
-    if (!form.name.trim()) {
-      setError("Please enter the food name.");
-      return;
-    }
-
-    if (!form.expiryDate) {
-      setError("Please select an expiry date.");
-      return;
-    }
-
-    const quantity = Number(form.quantity);
-
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      setError("Quantity must be greater than zero.");
-      return;
-    }
-
-    const payload = {
-      ...form,
-      name: form.name.trim(),
-      quantity,
-      consumed: editingFood ? Boolean(editingFood.consumed) : false,
-    };
-
-    setSaving(true);
-
-    try {
-      if (editingFood) {
-        await updateFood(editingFood._id, payload);
-        setNotice("Food item updated successfully.");
-      } else {
-        await addFood(payload);
-        setNotice("Food item added successfully.");
-      }
-
-      setShowModal(false);
-      setEditingFood(null);
-      setForm(initialForm);
-      await loadFoods();
-    } catch (err) {
-      setError(err.message || "Could not save the food item.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDeleteFood(food) {
-    const confirmed = window.confirm(
-      `Delete "${food.name}" from your inventory?`
-    );
-
-    if (!confirmed) return;
-
-    setError("");
-    setNotice("");
-
-    try {
-      await deleteFood(food._id);
-      setFoods((current) =>
-        current.filter((item) => item._id !== food._id)
-      );
-      setNotice(`${food.name} deleted successfully.`);
-    } catch (err) {
-      setError(err.message || "Could not delete the food item.");
-    }
-  }
-
-  async function handleConsumeFood(food) {
-    setError("");
-    setNotice("");
-
-    try {
-      await updateFood(food._id, { consumed: true });
-
-      setFoods((current) =>
-        current.map((item) =>
-          item._id === food._id ? { ...item, consumed: true } : item
-        )
-      );
-
-      setNotice(`${food.name} marked as consumed.`);
-    } catch (err) {
-      setError(err.message || "Could not update the food item.");
-    }
-  }
-
-  const navigation = [
-    { name: "Dashboard", icon: LayoutDashboard },
-    { name: "Expiring Soon", icon: Clock3 },
-    { name: "Food Waste", icon: Trash2 },
-    { name: "Consumed", icon: CheckCircle2 },
-  ];
-
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
-      {sidebarOpen && (
-        <button
-          type="button"
-          aria-label="Close sidebar"
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-30 bg-slate-950/30 md:hidden"
-        />
-      )}
-
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform duration-200 md:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="flex h-20 items-center gap-3 border-b border-slate-100 px-6">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white">
-            <Leaf size={24} />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">
-              FoodGuard
-            </h1>
-            <p className="text-xs text-slate-500">Waste less. Save more.</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(false)}
-            className="ml-auto rounded-lg p-2 md:hidden"
-            aria-label="Close menu"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="px-4 py-6">
-          <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-            Workspace
-          </p>
-
-          <nav className="space-y-1">
-            {navigation.map(({ name, icon: Icon }) => (
-              <button
-                key={name}
-                type="button"
-                onClick={() => {
-                  setActiveView(name);
-                  setSidebarOpen(false);
-                  setError("");
-                }}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
-                  activeView === name
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                <Icon size={18} />
-                {name}
-                {name === "Expiring Soon" && stats.expiring > 0 && (
-                  <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-                    {stats.expiring}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        <div className="mt-auto p-4">
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-            <div className="mb-2 flex items-center gap-2 text-emerald-700">
-              <Sparkles size={17} />
-              <span className="text-sm font-semibold">FoodGuard tip</span>
-            </div>
-            <p className="text-xs leading-5 text-emerald-800">
-              Use food that expires first before opening newer items.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onLogout}
-            className="mt-4 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-500 transition hover:bg-rose-50 hover:text-rose-700"
-          >
-            <LogOut size={18} />
-            Log out
-          </button>
-        </div>
-      </aside>
-
-      <main className="min-h-screen md:ml-64">
-        <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur-xl sm:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="rounded-xl border border-slate-200 p-2 md:hidden"
-              aria-label="Open menu"
-            >
-              <Menu size={20} />
-            </button>
-            <div className="min-w-0">
-              <h2 className="truncate text-lg font-bold text-slate-900 sm:text-xl">
-                {activeView}
-              </h2>
-              <p className="hidden text-xs text-slate-500 sm:block">
-                Manage your food inventory smartly.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => setShowNotifications((value) => !value)}
-              className="relative rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700"
               aria-label="Expiry notifications"
             >
               <Bell size={19} />
               {expiryReminders.length > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-400/100 px-1 text-[10px] font-bold text-white">
                   {expiryReminders.length}
                 </span>
               )}
             </button>
 
             <div className="hidden text-right sm:block">
-              <p className="max-w-36 truncate text-sm font-semibold text-slate-800">
+              <p className="max-w-36 truncate text-sm font-semibold text-slate-200">
                 {user?.name || user?.email || "FoodGuard User"}
               </p>
-              <p className="text-xs text-slate-500">Your inventory</p>
+              <p className="text-xs text-slate-400">Your inventory</p>
             </div>
 
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 font-bold text-emerald-700">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/10 font-bold text-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.10)]">
               {(user?.name || user?.email || "F").charAt(0).toUpperCase()}
             </div>
           </div>
 
           {showNotifications && (
-            <div className="absolute right-4 top-16 z-50 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl sm:right-8">
+            <div className="absolute right-4 top-16 z-50 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-emerald-900/60 bg-[#0B211B] p-4 shadow-xl sm:right-8">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-semibold text-slate-900">
+                <h3 className="font-semibold text-slate-100">
                   Expiry reminders
                 </h3>
                 <button
                   type="button"
                   onClick={() => setShowNotifications(false)}
                   aria-label="Close notifications"
-                  className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
+                  className="rounded-lg p-1 text-slate-400 hover:bg-emerald-950/50"
                 >
                   <X size={17} />
                 </button>
               </div>
 
               {expiryReminders.length === 0 ? (
-                <p className="py-4 text-sm text-slate-500">
+                <p className="py-4 text-sm text-slate-400">
                   No upcoming expiry reminders.
                 </p>
               ) : (
@@ -621,12 +45,12 @@ function Dashboard({ user, onLogout }) {
                   {expiryReminders.map((food) => (
                     <div
                       key={food._id}
-                      className="rounded-xl border border-slate-100 bg-slate-50 p-3"
+                      className="rounded-xl border border-emerald-900/40 bg-[#081C16] p-3"
                     >
-                      <p className="text-sm font-semibold text-slate-800">
+                      <p className="text-sm font-semibold text-slate-200">
                         {food.name}
                       </p>
-                      <p className="mt-1 text-xs text-rose-600">
+                      <p className="mt-1 text-xs text-rose-300">
                         {food.expiryInfo.label}
                       </p>
                     </div>
@@ -640,13 +64,13 @@ function Dashboard({ user, onLogout }) {
         <div className="mx-auto max-w-7xl space-y-7 p-4 sm:p-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-400">
                 Welcome back{user?.name ? `, ${user.name}` : ""} 👋
               </p>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-100 sm:text-3xl">
                 Let's reduce food waste.
               </h1>
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-slate-400">
                 Keep track of your food and expiry dates in one place.
               </p>
             </div>
@@ -656,7 +80,7 @@ function Dashboard({ user, onLogout }) {
                 type="button"
                 onClick={loadFoods}
                 disabled={loading}
-                className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 rounded-xl border border-emerald-900/60 bg-[#0B211B] px-4 py-3 text-sm font-semibold text-slate-300 transition hover:bg-emerald-950/50 disabled:opacity-50"
               >
                 <RefreshCw
                   size={16}
@@ -668,7 +92,7 @@ function Dashboard({ user, onLogout }) {
               <button
                 type="button"
                 onClick={openAddModal}
-                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                className="flex items-center justify-center gap-2 fg-primary-button rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
               >
                 <Plus size={17} />
                 Add food
@@ -677,7 +101,7 @@ function Dashboard({ user, onLogout }) {
           </div>
 
           {error && (
-            <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            <div className="flex items-start gap-3 rounded-2xl border border-rose-400/25 bg-rose-400/10 p-4 text-sm text-rose-200">
               <AlertTriangle size={19} className="mt-0.5 shrink-0" />
               <div className="flex-1">{error}</div>
               <button
@@ -691,7 +115,7 @@ function Dashboard({ user, onLogout }) {
           )}
 
           {notice && (
-            <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+            <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4 text-sm text-emerald-200">
               <CheckCircle2 size={19} />
               <span className="flex-1">{notice}</span>
               <button
@@ -733,15 +157,15 @@ function Dashboard({ user, onLogout }) {
             />
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <section className="fg-panel rounded-2xl p-4 sm:p-6">
             <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">
+                <h3 className="text-lg font-bold text-slate-100">
                   {activeView === "Dashboard"
                     ? "Food inventory"
                     : activeView}
                 </h3>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-400">
                   {filteredFoods.length} item
                   {filteredFoods.length === 1 ? "" : "s"} found
                 </p>
@@ -750,346 +174,19 @@ function Dashboard({ user, onLogout }) {
               <div className="relative w-full sm:max-w-xs">
                 <Search
                   size={17}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
                 />
                 <input
                   type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search food or category..."
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:bg-white"
+                  className="w-full rounded-xl border border-emerald-900/60 bg-[#081C16] py-3 pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:bg-[#0B211B]"
                 />
               </div>
             </div>
 
             {loading ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-500">
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-400">
                 <LoaderCircle
                   size={30}
-                  className="animate-spin text-emerald-600"
-                />
-                <p className="text-sm">Loading your food inventory...</p>
-              </div>
-            ) : filteredFoods.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-14 text-center">
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                  <Package size={26} />
-                </div>
-                <h4 className="font-semibold text-slate-900">
-                  {activeView === "Consumed"
-                    ? "No consumed items yet"
-                    : search
-                      ? "No matching food found"
-                      : "Your inventory is empty"}
-                </h4>
-                <p className="mt-2 max-w-sm text-sm text-slate-500">
-                  {search
-                    ? "Try another food name or category."
-                    : "Add your first food item to start tracking expiry dates."}
-                </p>
-                {!search && activeView !== "Consumed" && (
-                  <button
-                    type="button"
-                    onClick={openAddModal}
-                    className="mt-5 flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
-                  >
-                    <Plus size={16} />
-                    Add your first food
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredFoods.map((food) => (
-                  <FoodRow
-                    key={food._id}
-                    food={food}
-                    onEdit={() => handleEditFood(food)}
-                    onDelete={() => handleDeleteFood(food)}
-                    onConsume={() => handleConsumeFood(food)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-
-          <footer className="flex flex-col justify-between gap-2 pb-2 text-xs text-slate-400 sm:flex-row">
-            <p>FoodGuard — Waste less. Save more.</p>
-            <p>Helping you manage food responsibly 🌱</p>
-          </footer>
-        </div>
-      </main>
-
-      {showModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !saving) {
-              setShowModal(false);
-            }
-          }}
-        >
-          <div className="my-auto w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-5 sm:px-7">
-              <div>
-                <h3 className="text-xl font-bold text-slate-900">
-                  {editingFood ? "Edit food item" : "Add food item"}
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Enter the details of your food.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => setShowModal(false)}
-                aria-label="Close form"
-                className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
-              >
-                <X size={19} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveFood} className="space-y-5 p-5 sm:p-7">
-              {error && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-                  {error}
-                </div>
-              )}
-
-              <div className="grid gap-5 sm:grid-cols-2">
-                <FormField label="Food name *">
-                  <input
-                    required
-                    maxLength={100}
-                    className={inputClass}
-                    placeholder="e.g. Tomatoes"
-                    value={form.name}
-                    onChange={(event) =>
-                      setForm({ ...form, name: event.target.value })
-                    }
-                  />
-                </FormField>
-
-                <FormField label="Category *">
-                  <select
-                    required
-                    className={inputClass}
-                    value={form.category}
-                    onChange={(event) =>
-                      setForm({ ...form, category: event.target.value })
-                    }
-                  >
-                    {[
-                      "Vegetables",
-                      "Fruits",
-                      "Dairy",
-                      "Bakery",
-                      "Meat",
-                      "Seafood",
-                      "Grains",
-                      "Beverages",
-                      "Frozen",
-                      "Other",
-                    ].map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-
-                <FormField label="Quantity *">
-                  <input
-                    required
-                    type="number"
-                    min="0.01"
-                    step="any"
-                    className={inputClass}
-                    value={form.quantity}
-                    onChange={(event) =>
-                      setForm({ ...form, quantity: event.target.value })
-                    }
-                  />
-                </FormField>
-
-                <FormField label="Unit *">
-                  <select
-                    required
-                    className={inputClass}
-                    value={form.unit}
-                    onChange={(event) =>
-                      setForm({ ...form, unit: event.target.value })
-                    }
-                  >
-                    {[
-                      "pieces",
-                      "kg",
-                      "g",
-                      "litres",
-                      "ml",
-                      "packets",
-                      "dozen",
-                    ].map((unit) => (
-                      <option key={unit} value={unit}>
-                        {unit}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-
-                <FormField label="Purchase date">
-                  <input
-                    type="date"
-                    className={inputClass}
-                    value={form.purchaseDate}
-                    onChange={(event) =>
-                      setForm({ ...form, purchaseDate: event.target.value })
-                    }
-                  />
-                </FormField>
-
-                <FormField label="Expiry date *">
-                  <input
-                    required
-                    type="date"
-                    className={inputClass}
-                    value={form.expiryDate}
-                    onChange={(event) =>
-                      setForm({ ...form, expiryDate: event.target.value })
-                    }
-                  />
-                </FormField>
-
-                <FormField label="Storage location">
-                  <select
-                    className={inputClass}
-                    value={form.storageLocation}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        storageLocation: event.target.value,
-                      })
-                    }
-                  >
-                    {[
-                      "Refrigerator",
-                      "Freezer",
-                      "Pantry",
-                      "Kitchen shelf",
-                      "Other",
-                    ].map((location) => (
-                      <option key={location} value={location}>
-                        {location}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-
-                <FormField label="Notes">
-                  <input
-                    maxLength={500}
-                    className={inputClass}
-                    placeholder="Optional notes"
-                    value={form.notes}
-                    onChange={(event) =>
-                      setForm({ ...form, notes: event.target.value })
-                    }
-                  />
-                </FormField>
-              </div>
-
-              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => setShowModal(false)}
-                  className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-                >
-                  {saving && <LoaderCircle size={16} className="animate-spin" />}
-                  {saving
-                    ? "Saving..."
-                    : editingFood
-                      ? "Save changes"
-                      : "Add food"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function App() {
-  const [session, setSession] = useState(() => {
-    try {
-      const token = sessionStorage.getItem("foodguard_token");
-      const savedUser = sessionStorage.getItem("foodguard_user");
-
-      if (!token || !savedUser) return null;
-
-      return {
-        token,
-        user: JSON.parse(savedUser),
-      };
-    } catch {
-      sessionStorage.removeItem("foodguard_token");
-      sessionStorage.removeItem("foodguard_user");
-      return null;
-    }
-  });
-
-  function handleLogin(result) {
-    const token = result?.token;
-    const user = result?.user;
-
-    if (!token || !user) {
-      throw new Error("Login response did not contain a token and user.");
-    }
-
-    sessionStorage.setItem("foodguard_token", token);
-    sessionStorage.setItem("foodguard_user", JSON.stringify(user));
-
-    setSession({ token, user });
-  }
-
-  function handleLogout() {
-    sessionStorage.removeItem("foodguard_token");
-    sessionStorage.removeItem("foodguard_user");
-    setSession(null);
-  }
-
-  useEffect(() => {
-    const handleExpiredSession = () => {
-      handleLogout();
-    };
-
-    window.addEventListener("foodguard:logout", handleExpiredSession);
-
-    return () => {
-      window.removeEventListener("foodguard:logout", handleExpiredSession);
-    };
-  }, []);
-
-  if (!session) {
-    return <AuthPage onLogin={handleLogin} />;
-  }
-
-  return (
-    <Dashboard
-      user={session.user}
-      onLogout={handleLogout}
-    />
-  );
-}
