@@ -145,6 +145,8 @@ router.post("/forgot-password", async (req, res) => {
       });
     }
 
+    
+
     const user = await User.findOne({ email });
 
     // Do not reveal whether an account exists.
