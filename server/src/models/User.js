@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema(
       default: undefined,
     },
 
-    // Password reset
+  
     passwordResetTokenHash: {
       type: String,
       default: undefined,
