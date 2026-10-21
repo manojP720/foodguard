@@ -91,7 +91,6 @@ router.post("/login", async (req, res) => {
         message: "Email and password are required.",
       });
     }
-
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
     });
@@ -102,7 +101,6 @@ router.post("/login", async (req, res) => {
         message: "Invalid email or password.",
       });
     }
-
     const passwordMatches = await bcrypt.compare(
       password,
       user.passwordHash
