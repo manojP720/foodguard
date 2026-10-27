@@ -1101,7 +1101,6 @@ export default function App() {
     sessionStorage.removeItem("foodguard_user");
     setSession(null);
   }
-
   useEffect(() => {
     const handleExpiredSession = () => {
       handleLogout();
