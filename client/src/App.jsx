@@ -1040,6 +1040,7 @@ function Dashboard({ user, onLogout }) {
                   className="rounded-xl border border-emerald-900/60 px-5 py-3 text-sm font-semibold text-slate-300 hover:bg-[#081C16] disabled:opacity-50"
                 >
                   Cancel
+
                 </button>
 
                 <button
@@ -1070,7 +1071,6 @@ export default function App() {
       const savedUser = sessionStorage.getItem("foodguard_user");
 
       if (!token || !savedUser) return null;
-
       return {
         token,
         user: JSON.parse(savedUser),
