@@ -1,5 +1,7 @@
-
+import voiceRoutes from "./routes/voiceRoutes.js";
 const express = require("express");
+
+
 const authRoutes = require("./routes/authRoutes");
 const cors = require("cors");
 require("dotenv").config();
@@ -22,6 +24,8 @@ app.get("/api/health", (req, res) => {
     message: "FoodGuard API is running 🚀",
   });
 });
+
+app.use("/api/voice", voiceRoutes);
 
 app.use("/api/foods", foodRoutes);
 
