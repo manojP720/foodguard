@@ -1,10 +1,11 @@
 
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
-const crypto = require("crypto");
-const { sendEmail } = require("../utils/emailService");
+import express from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+
+import User from "../models/User.js";
+import { sendEmail } from "../utils/emailService.js";
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ function createToken(user) {
   );
 }
 
-// Create account — public route
+// SIGNUP
 router.post("/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -36,7 +37,10 @@ router.post("/signup", async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const existingUser = await User.findOne({ email: normalizedEmail });
+
+    const existingUser = await User.findOne({
+      email: normalizedEmail,
+    });
 
     if (existingUser) {
       return res.status(409).json({
@@ -80,7 +84,7 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-// Login — public route
+// LOGIN
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -91,6 +95,7 @@ router.post("/login", async (req, res) => {
         message: "Email and password are required.",
       });
     }
+
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
     });
@@ -101,6 +106,7 @@ router.post("/login", async (req, res) => {
         message: "Invalid email or password.",
       });
     }
+
     const passwordMatches = await bcrypt.compare(
       password,
       user.passwordHash
@@ -132,6 +138,8 @@ router.post("/login", async (req, res) => {
     });
   }
 });
+
+// FORGOT PASSWORD
 router.post("/forgot-password", async (req, res) => {
   try {
     const email = req.body.email?.trim().toLowerCase();
@@ -143,11 +151,8 @@ router.post("/forgot-password", async (req, res) => {
       });
     }
 
-    
-
     const user = await User.findOne({ email });
 
-    // Do not reveal whether an account exists.
     const message =
       "If an account exists for this email, a password reset link will be sent.";
 
@@ -155,15 +160,18 @@ router.post("/forgot-password", async (req, res) => {
       return res.json({ success: true, message });
     }
 
-    // Generate a cryptographically secure, single-use token.
     const token = crypto.randomBytes(32).toString("hex");
+
     const tokenHash = crypto
       .createHash("sha256")
       .update(token)
       .digest("hex");
 
     user.passwordResetTokenHash = tokenHash;
-    user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
+    user.passwordResetExpires = new Date(
+      Date.now() + 15 * 60 * 1000
+    );
+
     await user.save();
 
     const frontendUrl =
@@ -176,7 +184,7 @@ router.post("/forgot-password", async (req, res) => {
       await sendEmail({
         to: user.email,
         subject: "Reset your FoodGuard password",
-        text: `Use this link to reset your password within 15 minutes: ${resetLink}\n\nIf you did not request this, ignore this email.`,
+        text: `Use this link to reset your password within 15 minutes: ${resetLink}`,
         html: `
           <h2>FoodGuard password reset</h2>
           <p>Click below to set a new password. This link expires in 15 minutes.</p>
@@ -194,6 +202,7 @@ router.post("/forgot-password", async (req, res) => {
     return res.json({ success: true, message });
   } catch (error) {
     console.error("Forgot password error:", error.message);
+
     return res.status(500).json({
       success: false,
       message: "Unable to process the request. Please try again.",
@@ -201,5 +210,4 @@ router.post("/forgot-password", async (req, res) => {
   }
 });
 
-
-module.exports = router;
+export default router;
