@@ -1,15 +1,16 @@
 
-const express = require("express");
-const mongoose = require("mongoose");
-const Food = require("../models/Food");
-const authMiddleware = require("../middleware/authMiddleware");
+import express from "express";
+import mongoose from "mongoose";
+
+import Food from "../models/Food.js";
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // All food routes require login
 router.use(authMiddleware);
 
-// Fields users are allowed to create or update
+// Allowed fields
 const allowedFields = [
   "name",
   "category",
@@ -37,8 +38,9 @@ function pickAllowedFields(body) {
 // GET: only this user's food
 router.get("/", async (req, res) => {
   try {
-    const foods = await Food.find({ user: req.user.id })
-      .sort({ expiryDate: 1 });
+    const foods = await Food.find({
+      user: req.user.id,
+    }).sort({ expiryDate: 1 });
 
     res.json({
       success: true,
@@ -46,6 +48,8 @@ router.get("/", async (req, res) => {
       data: foods,
     });
   } catch (error) {
+    console.error("Fetch foods error:", error.message);
+
     res.status(500).json({
       success: false,
       message: "Could not fetch food items.",
@@ -53,7 +57,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST: add food to this user's account
+// POST: add food
 router.post("/", async (req, res) => {
   try {
     const foodData = pickAllowedFields(req.body);
@@ -69,6 +73,8 @@ router.post("/", async (req, res) => {
       data: food,
     });
   } catch (error) {
+    console.error("Add food error:", error.message);
+
     res.status(400).json({
       success: false,
       message: "Could not add food item. Check the entered details.",
@@ -91,7 +97,10 @@ router.put("/:id", async (req, res) => {
     if (updates.quantity !== undefined) {
       updates.quantity = Number(updates.quantity);
 
-      if (!Number.isFinite(updates.quantity) || updates.quantity < 0) {
+      if (
+        !Number.isFinite(updates.quantity) ||
+        updates.quantity < 0
+      ) {
         return res.status(400).json({
           success: false,
           message: "Quantity must be zero or greater.",
@@ -102,9 +111,15 @@ router.put("/:id", async (req, res) => {
     }
 
     const food = await Food.findOneAndUpdate(
-      { _id: req.params.id, user: req.user.id },
+      {
+        _id: req.params.id,
+        user: req.user.id,
+      },
       updates,
-      { new: true, runValidators: true }
+      {
+        new: true,
+        runValidators: true,
+      }
     );
 
     if (!food) {
@@ -120,6 +135,8 @@ router.put("/:id", async (req, res) => {
       data: food,
     });
   } catch (error) {
+    console.error("Update food error:", error.message);
+
     res.status(400).json({
       success: false,
       message: "Could not update food item.",
@@ -154,6 +171,8 @@ router.delete("/:id", async (req, res) => {
       message: "Food item deleted successfully.",
     });
   } catch (error) {
+    console.error("Delete food error:", error.message);
+
     res.status(500).json({
       success: false,
       message: "Could not delete food item.",
@@ -161,4 +180,4 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

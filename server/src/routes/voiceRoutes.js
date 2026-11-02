@@ -1,3 +1,4 @@
+
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
 
@@ -7,11 +8,17 @@ router.post("/session", authMiddleware, async (req, res) => {
   try {
     if (!process.env.OPENAI_API_KEY) {
       return res.status(503).json({
+        success: false,
         message: "Voice assistant is not configured.",
       });
     }
 
     const sessionConfig = {
+      expires_after: {
+        anchor: "created_at",
+        seconds: 600,
+      },
+
       session: {
         type: "realtime",
         model: "gpt-realtime-2.1",
@@ -19,24 +26,20 @@ router.post("/session", authMiddleware, async (req, res) => {
         instructions: `
 You are FoodGuard, an intelligent food management assistant.
 
-Your responsibilities:
-- Help users understand and manage their food inventory.
-- Answer questions about food expiry and storage.
-- Give practical food waste reduction suggestions.
-- Be friendly, clear and concise.
+Help users manage food inventory, understand expiry dates,
+reduce food waste and discover recipes.
 
-LANGUAGES:
-- Support English, Kannada and Hindi.
-- Respond in the language the user is substantively speaking.
-- Switch languages naturally when the user switches.
-- Do not infer language from accent alone.
-- If language is unclear, ask politely.
+Languages:
+- English
+- Kannada
+- Hindi
 
-IMPORTANT:
-- Never invent inventory records or expiry dates.
-- Never claim that an action succeeded unless the backend confirms it.
-- Ask for confirmation before destructive actions.
-- Keep spoken responses natural and relatively short.
+Respond naturally in the language the user speaks.
+Switch languages when the user switches.
+Never invent inventory records or expiry dates.
+Never claim an action succeeded without backend confirmation.
+Ask before destructive actions.
+Keep spoken responses concise and friendly.
 `,
 
         audio: {
@@ -64,31 +67,33 @@ IMPORTANT:
     if (!response.ok) {
       console.error("Realtime API error:", data);
 
-      return res.status(response.status).json({
-        message:
-          data.error?.message || "Could not create voice session.",
+      return res.status(502).json({
+        success: false,
+        message: "Could not create voice session.",
       });
     }
 
     if (!data.value) {
       return res.status(502).json({
-        message: "The voice session key was not returned.",
+        success: false,
+        message: "Voice session secret was not returned.",
       });
     }
 
-    res.json({
+    return res.json({
+      success: true,
       clientSecret: data.value,
       expiresAt: data.expires_at,
     });
 
   } catch (error) {
-    console.error("Voice session error:", error);
+    console.error("Voice session error:", error.message);
 
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: "Internal voice assistant error.",
     });
   }
 });
 
 export default router;
-        
