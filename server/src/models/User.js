@@ -1,5 +1,5 @@
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: 60,
     },
+
     email: {
       type: String,
       required: true,
@@ -16,28 +17,34 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+
     passwordHash: {
       type: String,
       required: true,
     },
+
     // Email verification
     emailVerified: {
       type: Boolean,
       default: false,
     },
+
     emailVerificationTokenHash: {
       type: String,
       default: undefined,
     },
+
     emailVerificationExpires: {
       type: Date,
       default: undefined,
     },
 
+    // Password reset
     passwordResetTokenHash: {
       type: String,
       default: undefined,
     },
+
     passwordResetExpires: {
       type: Date,
       default: undefined,
@@ -45,4 +52,7 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-module.exports = mongoose.model("User", userSchema);
+
+const User = mongoose.model("User", userSchema);
+
+export default User;
