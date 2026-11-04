@@ -1,14 +1,13 @@
 
+import "dotenv/config";
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import foodRoutes from "./routes/foodRoutes.js";
 import voiceRoutes from "./routes/voiceRoutes.js";
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -21,7 +20,7 @@ app.use(express.json());
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
-    message: "FoodGuard API is running 🚀",
+    message: "FoodGuard API is running",
   });
 });
 
@@ -39,7 +38,7 @@ const startServer = async () => {
       console.log(`FoodGuard API running on http://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error("Server startup failed:", error);
+    console.error("Server startup failed:", error.message);
     process.exit(1);
   }
 };

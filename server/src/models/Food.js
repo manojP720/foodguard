@@ -1,13 +1,13 @@
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const foodSchema = new mongoose.Schema(
   {
-     user: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "User",
-  required: true,
-},
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     name: {
       type: String,
       required: true,
@@ -52,4 +52,6 @@ const foodSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Food", foodSchema);
+const Food = mongoose.model("Food", foodSchema);
+
+export default Food;
