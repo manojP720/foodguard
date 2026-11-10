@@ -1,5 +1,8 @@
 
-const API_URL = "http://localhost:5000/api/auth";
+import { API_URL } from "../config/api";
+
+const AUTH_URL = `${API_URL}/auth`;
+
 
 export async function signup(name, email, password) {
   return authRequest("/signup", { name, email, password });
