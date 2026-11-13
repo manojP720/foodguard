@@ -29,7 +29,10 @@ import {
   Wheat,
   CupSoda,
   Snowflake,
+  Camera,
 } from "lucide-react";
+
+import BarcodeScanner from "./components/BarcodeScanner.jsx";
 
 import AuthPage from "./AuthPage";
 import {
@@ -37,6 +40,7 @@ import {
   addFood,
   updateFood,
   deleteFood,
+  lookupProductByBarcode,
 } from "./services/foodService";
 
 const todayString = () => {
@@ -47,6 +51,8 @@ const todayString = () => {
 
 const initialForm = {
   name: "",
+  barcode: "",
+  brand: "",
   category: "Vegetables",
   quantity: "1",
   unit: "pieces",
@@ -245,6 +251,9 @@ function Dashboard({ user, onLogout }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [barcodeLookupLoading, setBarcodeLookupLoading] = useState(false);
+  const [barcodeProduct, setBarcodeProduct] = useState(null);
   const [editingFood, setEditingFood] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [search, setSearch] = useState("");
@@ -345,6 +354,8 @@ function Dashboard({ user, onLogout }) {
   function openAddModal() {
     setError("");
     setNotice("");
+    setBarcodeProduct(null);
+    setShowBarcodeScanner(false);
     setEditingFood(null);
     setForm({ ...initialForm, purchaseDate: todayString() });
     setShowModal(true);
@@ -354,9 +365,13 @@ function Dashboard({ user, onLogout }) {
     setError("");
     setNotice("");
     setEditingFood(food);
+    setBarcodeProduct(null);
+    setShowBarcodeScanner(false);
 
     setForm({
       name: food.name || "",
+      barcode: food.barcode || "",
+      brand: food.brand || "",
       category: food.category || "Other",
       quantity: String(food.quantity ?? 1),
       unit: food.unit || "pieces",
@@ -367,6 +382,42 @@ function Dashboard({ user, onLogout }) {
     });
 
     setShowModal(true);
+  }
+
+  async function handleBarcodeDetected(barcode) {
+    setShowBarcodeScanner(false);
+    setBarcodeLookupLoading(true);
+    setBarcodeProduct(null);
+    setError("");
+    setNotice("");
+
+    // Keep the scanned code even when the public catalogue has no matching product.
+    setForm((current) => ({ ...current, barcode }));
+
+    try {
+      const product = await lookupProductByBarcode(barcode);
+      setBarcodeProduct(product);
+      setForm((current) => ({
+        ...current,
+        barcode: product.barcode || barcode,
+        name: product.name || current.name,
+        brand: product.brand || current.brand,
+        category: product.category || current.category,
+      }));
+      setNotice(
+        `Product details found. Review the information and enter the package expiry date before saving.`
+      );
+    } catch (err) {
+      if (err.status === 404) {
+        setError(
+          "Barcode scanned, but no product record was found. The barcode is retained; enter the food details manually."
+        );
+      } else {
+        setError(err.message || "Could not look up this barcode.");
+      }
+    } finally {
+      setBarcodeLookupLoading(false);
+    }
   }
 
   async function handleSaveFood(event) {
@@ -397,6 +448,13 @@ function Dashboard({ user, onLogout }) {
       quantity,
       consumed: editingFood ? Boolean(editingFood.consumed) : false,
     };
+
+    // The barcode is optional for manually added food items.
+    if (payload.barcode) {
+      payload.barcode = payload.barcode.trim();
+    } else {
+      delete payload.barcode;
+    }
 
     setSaving(true);
 
@@ -872,21 +930,74 @@ function Dashboard({ user, onLogout }) {
                 </p>
               </div>
 
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => setShowModal(false)}
-                aria-label="Close form"
-                className="rounded-xl border border-emerald-900/60 p-2 text-slate-400 hover:bg-[#081C16]"
-              >
-                <X size={19} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={saving || barcodeLookupLoading}
+                  onClick={() => {
+                    setError("");
+                    setShowBarcodeScanner(true);
+                  }}
+                  className="fg-primary-button inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 sm:px-4 sm:text-sm"
+                >
+                  <Camera size={16} />
+                  Scan barcode
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setShowModal(false)}
+                  aria-label="Close form"
+                  className="rounded-xl border border-emerald-900/60 p-2 text-slate-400 hover:bg-[#081C16]"
+                >
+                  <X size={19} />
+                </button>
+              </div>
             </div>
 
             <form onSubmit={handleSaveFood} className="space-y-5 p-5 sm:p-7">
               {error && (
                 <div className="rounded-xl border border-rose-400/25 bg-rose-400/10 p-3 text-sm text-rose-200">
                   {error}
+                </div>
+              )}
+
+              {barcodeLookupLoading && (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3 text-sm text-emerald-200">
+                  <LoaderCircle size={16} className="animate-spin" />
+                  Looking up product details…
+                </div>
+              )}
+
+              {barcodeProduct && (
+                <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-emerald-300" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-emerald-200">
+                        Product identified
+                      </p>
+                      <p className="mt-1 font-semibold text-slate-100">
+                        {barcodeProduct.name || "Name not provided by catalogue"}
+                      </p>
+                      {barcodeProduct.brand && (
+                        <p className="mt-1 text-sm text-slate-300">
+                          Brand: {barcodeProduct.brand}
+                        </p>
+                      )}
+                      {barcodeProduct.packageQuantity && (
+                        <p className="mt-1 text-sm text-slate-300">
+                          Pack size: {barcodeProduct.packageQuantity}
+                        </p>
+                      )}
+                      <p className="mt-1 break-all text-xs text-slate-400">
+                        Barcode: {barcodeProduct.barcode}
+                      </p>
+                      <p className="mt-2 text-xs text-slate-400">
+                        Catalogue data from Open Food Facts. Please verify it before saving.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -903,6 +1014,28 @@ function Dashboard({ user, onLogout }) {
                     }
                   />
                 </FormField>
+
+                <FormField label="Brand">
+                  <input
+                    maxLength={100}
+                    className={inputClass}
+                    placeholder="Optional brand"
+                    value={form.brand}
+                    onChange={(event) =>
+                      setForm({ ...form, brand: event.target.value })
+                    }
+                  />
+                </FormField>
+
+                {form.barcode && (
+                  <FormField label="Scanned barcode">
+                    <input
+                      readOnly
+                      className={`${inputClass} cursor-not-allowed opacity-80`}
+                      value={form.barcode}
+                    />
+                  </FormField>
+                )}
 
                 <FormField label="Category *">
                   <select
@@ -1059,6 +1192,13 @@ function Dashboard({ user, onLogout }) {
             </form>
           </div>
         </div>
+      )}
+
+      {showBarcodeScanner && (
+        <BarcodeScanner
+          onDetected={handleBarcodeDetected}
+          onClose={() => setShowBarcodeScanner(false)}
+        />
       )}
     </div>
   );
