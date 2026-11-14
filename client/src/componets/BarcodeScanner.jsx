@@ -2,14 +2,15 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 
-function BarcodeScanner({ onDetected, onClose }) {
+export default function BarcodeScanner({ onDetected, onClose }) {
   const videoRef = useRef(null);
   const controlsRef = useRef(null);
   const onDetectedRef = useRef(onDetected);
+  const scannedRef = useRef(false);
 
   const [status, setStatus] = useState("Starting camera...");
-  const [manualBarcode, setManualBarcode] = useState("");
   const [error, setError] = useState("");
+  const [manualBarcode, setManualBarcode] = useState("");
 
   useEffect(() => {
     onDetectedRef.current = onDetected;
@@ -17,8 +18,6 @@ function BarcodeScanner({ onDetected, onClose }) {
 
   useEffect(() => {
     let mounted = true;
-    let hasScanned = false;
-
     const reader = new BrowserMultiFormatReader();
 
     async function startScanner() {
@@ -27,22 +26,20 @@ function BarcodeScanner({ onDetected, onClose }) {
           undefined,
           videoRef.current,
           (result, scanError) => {
-            if (!mounted || hasScanned) return;
+            if (!mounted || scannedRef.current) return;
 
             if (result) {
-              hasScanned = true;
-
+              scannedRef.current = true;
               const barcode = result.getText();
 
               controlsRef.current?.stop();
               setStatus("Barcode detected!");
-
               onDetectedRef.current?.(barcode);
-              return;
-            }
-
-            if (scanError && scanError.name !== "NotFoundException") {
-              console.warn("Barcode scan:", scanError.message);
+            } else if (
+              scanError &&
+              scanError.name !== "NotFoundException"
+            ) {
+              console.warn("Scanner:", scanError.message);
             }
           }
         );
@@ -56,11 +53,9 @@ function BarcodeScanner({ onDetected, onClose }) {
         setStatus("Point your camera at a barcode");
       } catch (err) {
         if (mounted) {
-          setError(
-            "Unable to access camera. Please allow camera permission or enter the barcode manually."
-          );
+          setError("Camera unavailable. Enter barcode manually.");
           setStatus("Camera unavailable");
-          console.error("Camera error:", err);
+          console.error(err);
         }
       }
     }
@@ -84,40 +79,32 @@ function BarcodeScanner({ onDetected, onClose }) {
       return;
     }
 
+    scannedRef.current = true;
+    controlsRef.current?.stop();
     onDetectedRef.current?.(barcode);
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl">
-
+      <div className="w-full max-w-lg rounded-2xl bg-white p-5 text-gray-900">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">
+          <h2 className="text-xl font-bold">
             Scan Product Barcode
           </h2>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-3 py-2 text-gray-600 hover:bg-gray-100"
-          >
+          <button type="button" onClick={onClose}>
             ✕
           </button>
         </div>
 
-        <div className="overflow-hidden rounded-xl bg-black">
-          <video
-            ref={videoRef}
-            className="h-64 w-full object-cover"
-            autoPlay
-            muted
-            playsInline
-          />
-        </div>
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          className="h-64 w-full rounded-xl bg-black object-cover"
+        />
 
-        <p className="mt-3 text-center text-sm text-gray-600">
-          {status}
-        </p>
+        <p className="mt-3 text-center text-sm">{status}</p>
 
         {error && (
           <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">
@@ -125,36 +112,31 @@ function BarcodeScanner({ onDetected, onClose }) {
           </p>
         )}
 
-        <div className="my-5 flex items-center gap-3">
-          <div className="h-px flex-1 bg-gray-200" />
-          <span className="text-sm text-gray-500">OR</span>
-          <div className="h-px flex-1 bg-gray-200" />
-        </div>
-
-        <form onSubmit={handleManualSubmit}>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Enter barcode manually
-          </label>
-
+        <form onSubmit={handleManualSubmit} className="mt-5 space-y-3">
           <input
             type="text"
             value={manualBarcode}
             onChange={(event) => setManualBarcode(event.target.value)}
-            placeholder="Enter barcode number"
-            className="w-full rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-500"
+            placeholder="Enter barcode manually"
+            className="w-full rounded-lg border p-3"
           />
 
           <button
             type="submit"
-            className="mt-3 w-full rounded-lg bg-blue-600 p-3 font-semibold text-white hover:bg-blue-700"
+            className="w-full rounded-lg bg-emerald-600 p-3 font-semibold text-white"
           >
             Find Product
           </button>
         </form>
 
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-3 w-full rounded-lg border p-3"
+        >
+          Cancel
+        </button>
       </div>
     </div>
   );
 }
-
-export default BarcodeScanner;
