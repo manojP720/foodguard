@@ -30,9 +30,13 @@ import {
   CupSoda,
   Snowflake,
   Camera,
+  ScanLine,
+  Bot,
 } from "lucide-react";
 
 import BarcodeScanner from "./components/BarcodeScanner.jsx";
+import SmartAIScanner from "./components/SmartAIScanner.jsx";
+import FoodAssistant from "./components/FoodAssistant.jsx";
 
 import AuthPage from "./AuthPage";
 import {
@@ -252,6 +256,8 @@ function Dashboard({ user, onLogout }) {
   const [notice, setNotice] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [showSmartScanner, setShowSmartScanner] = useState(false);
+  const [showFoodAssistant, setShowFoodAssistant] = useState(false);
   const [barcodeLookupLoading, setBarcodeLookupLoading] = useState(false);
   const [barcodeProduct, setBarcodeProduct] = useState(null);
   const [editingFood, setEditingFood] = useState(null);
@@ -476,6 +482,58 @@ function Dashboard({ user, onLogout }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleScannedFood(scannedFood) {
+    setError("");
+    setNotice("");
+
+    const normalized = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const scannedBarcode = normalized(scannedFood.barcode);
+    const scannedName = normalized(scannedFood.name);
+    const scannedBrand = normalized(scannedFood.brand);
+    const scannedExpiry = dateInputValue(scannedFood.expiryDate);
+    const scannedUnit = normalized(scannedFood.unit || "pieces");
+    const scannedQuantity = Number(scannedFood.quantity || 1);
+
+    if (!scannedName) throw new Error("Please confirm the product name.");
+    if (!scannedExpiry) throw new Error("Please confirm the complete expiry date.");
+    if (!Number.isFinite(scannedQuantity) || scannedQuantity <= 0) {
+      throw new Error("Quantity must be greater than zero.");
+    }
+
+    // Match the same product and exact expiry batch. Barcode is preferred when present.
+    const existing = foods.find((food) => {
+      if (dateInputValue(food.expiryDate) !== scannedExpiry) return false;
+      const existingBarcode = normalized(food.barcode);
+      const sameProduct = scannedBarcode && existingBarcode
+        ? scannedBarcode === existingBarcode
+        : normalized(food.name) === scannedName && normalized(food.brand) === scannedBrand;
+      return sameProduct && normalized(food.unit || "pieces") === scannedUnit && !food.consumed;
+    });
+
+    if (existing) {
+      await updateFood(existing._id, {
+        quantity: Number(existing.quantity || 0) + scannedQuantity,
+      });
+      setNotice(`Added ${scannedQuantity} ${scannedUnit} to the existing ${existing.name} batch.`);
+    } else {
+      const payload = {
+        ...scannedFood,
+        name: scannedFood.name.trim(),
+        quantity: scannedQuantity,
+        unit: scannedUnit,
+        purchaseDate: scannedFood.purchaseDate || todayString(),
+        expiryDate: scannedExpiry,
+        consumed: false,
+      };
+      if (!payload.barcode) delete payload.barcode;
+      await addFood(payload);
+      setNotice(`${payload.name} added to your inventory.`);
+    }
+
+    setShowSmartScanner(false);
+    await loadFoods();
   }
 
   async function handleDeleteFood(food) {
@@ -748,13 +806,25 @@ function Dashboard({ user, onLogout }) {
                 disabled={loading}
                 className="flex items-center justify-center gap-2 rounded-xl border border-emerald-900/60 bg-[#0B211B] px-4 py-3 text-sm font-semibold text-slate-300 transition hover:bg-emerald-950/50 disabled:opacity-50"
               >
-                <RefreshCw
-                  size={16}
-                  className={loading ? "animate-spin" : ""}
-                />
+                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
                 Refresh
               </button>
-
+              <button
+                type="button"
+                onClick={() => setShowSmartScanner(true)}
+                className="flex items-center justify-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/20"
+              >
+                <ScanLine size={17} />
+                Smart AI Scan
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowFoodAssistant(true)}
+                className="flex items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-400/10 px-4 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-400/20"
+              >
+                <Bot size={17} />
+                Food Assistant
+              </button>
               <button
                 type="button"
                 onClick={openAddModal}
@@ -1198,6 +1268,20 @@ function Dashboard({ user, onLogout }) {
         <BarcodeScanner
           onDetected={handleBarcodeDetected}
           onClose={() => setShowBarcodeScanner(false)}
+        />
+      )}
+
+      {showSmartScanner && (
+        <SmartAIScanner
+          onClose={() => setShowSmartScanner(false)}
+          onSave={handleScannedFood}
+        />
+      )}
+
+      {showFoodAssistant && (
+        <FoodAssistant
+          foods={foods.filter((food) => !food.consumed)}
+          onClose={() => setShowFoodAssistant(false)}
         />
       )}
     </div>
