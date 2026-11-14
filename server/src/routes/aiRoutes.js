@@ -55,8 +55,10 @@ router.post("/chat", async (req, res) => {
       storageLocation: food.storageLocation,
       notes: food.notes || "",
     }));
+    const today = new Date().toISOString().slice(0, 10);
 
     const systemPrompt = `
+    CURRENT DATE: ${today}
 You are FoodGuard AI, an intelligent food inventory and food-waste reduction assistant.
 
 Your responsibilities:
