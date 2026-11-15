@@ -213,7 +213,6 @@ export default function FoodAssistant({ foods = [], onClose }) {
             placeholder="Ask about your food inventory..."
             className="min-w-0 flex-1 rounded-xl border border-emerald-900/70 bg-[#061712] px-4 py-3 text-sm text-slate-100 outline-none focus:border-violet-400"
           />
-
           <button
             type="submit"
             disabled={loading || !input.trim()}
