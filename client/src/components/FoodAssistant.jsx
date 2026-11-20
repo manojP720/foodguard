@@ -433,6 +433,7 @@ export default function FoodAssistant({ foods = [], onClose }) {
           </button>
 
         </form>
+        
         {listening && (
           <div className="bg-emerald-950/70 px-4 py-2 text-center text-xs text-emerald-300">
             <span className="animate-pulse">●</span>
