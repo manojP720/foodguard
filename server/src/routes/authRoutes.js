@@ -57,6 +57,45 @@ router.post("/signup", async (req, res) => {
       passwordHash,
     });
 
+    // Send welcome email without blocking registration
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: "Welcome to FoodGuard! 🌱",
+        text: `Hi ${user.name},
+
+Welcome to FoodGuard!
+
+Your account has been successfully created.
+
+You can now manage your food inventory, track expiry dates and reduce food waste.
+
+Happy Food Saving!
+
+Team FoodGuard`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;color:#333;">
+            <h2 style="color:#16a34a;">Welcome to FoodGuard! 🌱</h2>
+            <p>Hi ${user.name},</p>
+            <p>Your FoodGuard account has been successfully created.</p>
+            <p>With FoodGuard, you can:</p>
+            <ul>
+              <li>Manage your food inventory</li>
+              <li>Track food expiry dates</li>
+              <li>Receive expiry reminders</li>
+              <li>Get AI-powered recipe suggestions</li>
+            </ul>
+            <p>Let's reduce food waste together!</p>
+            <p><strong>Team FoodGuard 💚</strong></p>
+          </div>
+        `,
+      });
+
+      console.log(`Welcome email sent to ${user.email}`);
+    } catch (emailError) {
+      console.error("Welcome email failed:", emailError.message);
+    }
+
     return res.status(201).json({
       success: true,
       message: "Account created successfully.",
@@ -211,4 +250,3 @@ router.post("/forgot-password", async (req, res) => {
 });
 
 export default router;
- 
