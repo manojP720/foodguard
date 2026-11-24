@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.6.1"
+  }
+}
