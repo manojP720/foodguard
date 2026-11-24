@@ -10,6 +10,10 @@ import foodRoutes from "./routes/foodRoutes.js";
 import voiceRoutes from "./routes/voiceRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 
+import {
+  startExpiryNotificationScheduler,
+} from "./services/expiryNotification.js";
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -30,10 +34,14 @@ app.use("/api/auth", authRoutes);
 app.use("/api/foods", foodRoutes);
 app.use("/api/voice", voiceRoutes);
 app.use("/api/ai", aiRoutes);
+
 // Start server after database connects
 const startServer = async () => {
   try {
     await connectDB();
+
+    // Start daily expiry email notifications
+    startExpiryNotificationScheduler();
 
     app.listen(PORT, () => {
       console.log(`FoodGuard API running on http://localhost:${PORT}`);

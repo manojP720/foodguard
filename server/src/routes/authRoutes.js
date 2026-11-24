@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
 import User from "../models/User.js";
+import Food from "../models/Food.js";
 import { sendEmail } from "../utils/emailService.js";
 
 const router = express.Router();
@@ -15,6 +16,140 @@ function createToken(user) {
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
+}
+
+function escapeHtml(value = "") {
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[char]);
+}
+
+function getIndiaDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value])
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function getDaysLeft(expiryDate) {
+  const today = getIndiaDate();
+  const expiry = new Date(expiryDate).toISOString().slice(0, 10);
+
+  const [y1, m1, d1] = today.split("-").map(Number);
+  const [y2, m2, d2] = expiry.split("-").map(Number);
+
+  return Math.round(
+    (Date.UTC(y2, m2 - 1, d2) -
+      Date.UTC(y1, m1 - 1, d1)) / 86400000
+  );
+}
+
+function getExpiryStatus(daysLeft) {
+  if (daysLeft < 0) return `Expired ${Math.abs(daysLeft)} day(s) ago`;
+  if (daysLeft === 0) return "Expires today";
+  if (daysLeft === 1) return "Expires tomorrow";
+  return `Expires in ${daysLeft} days`;
+}
+
+function getRecipeSuggestions(items) {
+  const names = items.map((item) => item.name.toLowerCase());
+  const recipes = [];
+
+  if (names.some((n) => n.includes("egg")) &&
+      names.some((n) => n.includes("bread"))) {
+    recipes.push("Bread omelette – use your available bread and eggs.");
+  }
+
+  if (names.some((n) => n.includes("milk")) &&
+      names.some((n) => n.includes("egg"))) {
+    recipes.push("Milk and egg pancakes – use your available milk and eggs.");
+  }
+
+  if (names.some((n) => n.includes("rice")) &&
+      names.some((n) => n.includes("tomato"))) {
+    recipes.push("Tomato rice – use your available rice and tomatoes.");
+  }
+
+  if (names.some((n) => n.includes("potato")) &&
+      names.some((n) => n.includes("onion"))) {
+    recipes.push("Potato onion stir-fry – use your available potatoes and onions.");
+  }
+
+  if (recipes.length === 0 && items.length > 0) {
+    recipes.push(
+      `Check your available ingredients (${items.slice(0, 4).map((i) => i.name).join(", ")}) and prepare a suitable meal before they expire.`
+    );
+  }
+
+  return recipes;
+}
+
+async function getUserInventory(userId) {
+  const foods = await Food.find({
+    user: userId,
+    consumed: false,
+    quantity: { $gt: 0 },
+  }).sort({ expiryDate: 1 }).lean();
+
+  return foods.map((food) => ({
+    ...food,
+    daysLeft: getDaysLeft(food.expiryDate),
+  }));
+}
+
+function createInventoryText(items) {
+  if (!items.length) {
+    return "Your inventory is currently empty. Add food items to start tracking expiry dates.";
+  }
+
+  return items.map((item) =>
+    `${item.name} - ${getExpiryStatus(item.daysLeft)}`
+  ).join("\n");
+}
+
+function createInventoryHtml(items) {
+  if (!items.length) {
+    return "<p>Your inventory is currently empty. Add food items to start tracking expiry dates.</p>";
+  }
+
+  return `
+    <table style="border-collapse:collapse;width:100%;">
+      <thead>
+        <tr>
+          <th style="padding:10px;border:1px solid #ddd;">Food</th>
+          <th style="padding:10px;border:1px solid #ddd;">Quantity</th>
+          <th style="padding:10px;border:1px solid #ddd;">Expiry status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map((item) => `
+          <tr>
+            <td style="padding:10px;border:1px solid #ddd;">
+              ${escapeHtml(item.name)}
+            </td>
+            <td style="padding:10px;border:1px solid #ddd;">
+              ${escapeHtml(item.quantity)} ${escapeHtml(item.unit)}
+            </td>
+            <td style="padding:10px;border:1px solid #ddd;">
+              ${escapeHtml(getExpiryStatus(item.daysLeft))}
+            </td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
 }
 
 // SIGNUP
@@ -57,7 +192,7 @@ router.post("/signup", async (req, res) => {
       passwordHash,
     });
 
-    // Send welcome email without blocking registration
+    // Welcome email ONLY after signup
     try {
       await sendEmail({
         to: user.email,
@@ -68,32 +203,23 @@ Welcome to FoodGuard!
 
 Your account has been successfully created.
 
-You can now manage your food inventory, track expiry dates and reduce food waste.
+Manage your food inventory, track expiry dates and reduce food waste.
 
-Happy Food Saving!
-
-Team FoodGuard`,
+Team FoodGuard 💚`,
         html: `
-          <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;color:#333;">
+          <div style="font-family:Arial,sans-serif;padding:24px;color:#333;">
             <h2 style="color:#16a34a;">Welcome to FoodGuard! 🌱</h2>
-            <p>Hi ${user.name},</p>
-            <p>Your FoodGuard account has been successfully created.</p>
-            <p>With FoodGuard, you can:</p>
-            <ul>
-              <li>Manage your food inventory</li>
-              <li>Track food expiry dates</li>
-              <li>Receive expiry reminders</li>
-              <li>Get AI-powered recipe suggestions</li>
-            </ul>
-            <p>Let's reduce food waste together!</p>
-            <p><strong>Team FoodGuard 💚</strong></p>
+            <p>Hi ${escapeHtml(user.name)},</p>
+            <p>Your account has been successfully created.</p>
+            <p>You can now manage your food inventory, track expiry dates and get recipe suggestions.</p>
+            <strong>Team FoodGuard 💚</strong>
           </div>
         `,
       });
 
-      console.log(`Welcome email sent to ${user.email}`);
-    } catch (emailError) {
-      console.error("Welcome email failed:", emailError.message);
+      console.log(`Signup welcome email sent to ${user.email}`);
+    } catch (error) {
+      console.error("Signup welcome email failed:", error.message);
     }
 
     return res.status(201).json({
@@ -158,6 +284,56 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    // Login email with this user's actual inventory
+    try {
+      const items = await getUserInventory(user._id);
+      const recipes = getRecipeSuggestions(
+        items.filter((item) => item.daysLeft >= 0)
+      );
+
+      await sendEmail({
+        to: user.email,
+        subject: "Welcome Back to FoodGuard! 💚",
+        text: `Hi ${user.name},
+
+Welcome back to FoodGuard!
+
+Your inventory:
+${createInventoryText(items)}
+
+Recipe suggestions:
+${recipes.length ? recipes.join("\n") : "Add available food items to get recipe suggestions."}
+
+Use your food wisely!
+
+Team FoodGuard 💚`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;padding:24px;color:#333;">
+            <h2 style="color:#16a34a;">Welcome Back to FoodGuard! 💚</h2>
+            <p>Hi ${escapeHtml(user.name)},</p>
+            <p>Your food inventory is ready. Here is your latest expiry status:</p>
+
+            ${createInventoryHtml(items)}
+
+            <h3 style="color:#16a34a;">🍳 Recipe Suggestions</h3>
+            <ul>
+              ${recipes.length
+                ? recipes.map((recipe) => `<li>${escapeHtml(recipe)}</li>`).join("")
+                : "<li>Add available food items to get recipe suggestions.</li>"
+              }
+            </ul>
+
+            <p>Use your available ingredients before they expire!</p>
+            <strong>Team FoodGuard 💚</strong>
+          </div>
+        `,
+      });
+
+      console.log(`Welcome back email sent to ${user.email}`);
+    } catch (emailError) {
+      console.error("Welcome back email failed:", emailError.message);
+    }
+
     return res.json({
       success: true,
       message: "Login successful.",
@@ -174,6 +350,94 @@ router.post("/login", async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Could not log in. Please try again.",
+    });
+  }
+});
+
+// LOGOUT
+router.post("/logout", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : null;
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication token is required.",
+      });
+    }
+
+    let decoded;
+
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired token.",
+      });
+    }
+
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    // Send goodbye email with latest expiry information
+    try {
+      const items = await getUserInventory(user._id);
+
+      const upcoming = items.filter((item) => item.daysLeft >= 0);
+
+      await sendEmail({
+        to: user.email,
+        subject: "See You Soon! FoodGuard Goodbye 👋",
+        text: `Hi ${user.name},
+
+You have successfully logged out of FoodGuard.
+
+Remember to check your food inventory:
+
+${createInventoryText(items)}
+
+Take care of your food and avoid waste!
+
+Team FoodGuard 💚`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;padding:24px;color:#333;">
+            <h2 style="color:#16a34a;">See You Soon! 👋</h2>
+            <p>Hi ${escapeHtml(user.name)},</p>
+            <p>You have successfully logged out of FoodGuard.</p>
+            <p>Before you go, check your food expiry status:</p>
+            ${createInventoryHtml(items)}
+            <p>You have <strong>${upcoming.length}</strong> item(s) that are not yet expired.</p>
+            <p>Use them wisely and help reduce food waste!</p>
+            <strong>Team FoodGuard 💚</strong>
+          </div>
+        `,
+      });
+
+      console.log(`Goodbye email sent to ${user.email}`);
+    } catch (emailError) {
+      console.error("Goodbye email failed:", emailError.message);
+    }
+
+    return res.json({
+      success: true,
+      message: "Logged out successfully.",
+    });
+  } catch (error) {
+    console.error("Logout error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Logout failed.",
     });
   }
 });
@@ -226,7 +490,7 @@ router.post("/forgot-password", async (req, res) => {
         text: `Use this link to reset your password within 15 minutes: ${resetLink}`,
         html: `
           <h2>FoodGuard password reset</h2>
-          <p>Click below to set a new password. This link expires in 15 minutes.</p>
+          <p>This link expires in 15 minutes.</p>
           <p><a href="${resetLink}">Reset my password</a></p>
           <p>If you did not request this, ignore this email.</p>
         `,
