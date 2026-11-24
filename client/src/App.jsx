@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -39,6 +39,7 @@ import SmartAIScanner from "./components/SmartAIScanner.jsx";
 import FoodAssistant from "./components/FoodAssistant.jsx";
 
 import AuthPage from "./AuthPage";
+
 import {
   getFoods,
   addFood,
@@ -46,6 +47,12 @@ import {
   deleteFood,
   lookupProductByBarcode,
 } from "./services/foodService";
+
+// Keep this in sync with the API base URL used by the auth/food services.
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
+const LOGOUT_API_URL = `${API_BASE_URL}/api/auth/logout`;
 
 const todayString = () => {
   const date = new Date();
@@ -687,7 +694,7 @@ function Dashboard({ user, onLogout }) {
 
           <button
             type="button"
-            onClick={onLogout}
+            onClick={() => onLogout()}
             className="mt-4 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-400 transition hover:bg-rose-400/10 hover:text-rose-200"
           >
             <LogOut size={18} />
@@ -1320,14 +1327,52 @@ export default function App() {
     setSession({ token, user });
   }
 
-  function handleLogout() {
-    sessionStorage.removeItem("foodguard_token");
-    sessionStorage.removeItem("foodguard_user");
-    setSession(null);
-  }
+  const logoutInProgressRef = useRef(false);
+
+  const handleLogout = useCallback(async (sendGoodbyeEmail = true) => {
+    // Prevent duplicate emails if the logout button is clicked more than once.
+    if (logoutInProgressRef.current) return;
+    logoutInProgressRef.current = true;
+
+    const token = sessionStorage.getItem("foodguard_token");
+
+    try {
+      // Request the Goodbye email before removing the authentication token.
+      // Expired sessions call handleLogout(false), so they do not send this email.
+      if (sendGoodbyeEmail && token) {
+        const response = await fetch(LOGOUT_API_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          const responseText = await response.text().catch(() => "");
+          console.error(
+            "FoodGuard logout request failed:",
+            response.status,
+            responseText
+          );
+        } else {
+          console.info("FoodGuard logout request completed.");
+        }
+      }
+    } catch (error) {
+      // Always allow the user to log out, even if the email server is unavailable.
+      console.error("FoodGuard Goodbye email request failed:", error.message);
+    } finally {
+      sessionStorage.removeItem("foodguard_token");
+      sessionStorage.removeItem("foodguard_user");
+      setSession(null);
+      logoutInProgressRef.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     const handleExpiredSession = () => {
-      handleLogout();
+      // foodService dispatches this event after a 401 and clears the token first.
+      void handleLogout(false);
     };
 
     window.addEventListener("foodguard:logout", handleExpiredSession);
@@ -1335,7 +1380,7 @@ export default function App() {
     return () => {
       window.removeEventListener("foodguard:logout", handleExpiredSession);
     };
-  }, []);
+  }, [handleLogout]);
 
   if (!session) {
     return <AuthPage onLogin={handleLogin} />;
