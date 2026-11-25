@@ -1385,7 +1385,6 @@ export default function App() {
   if (!session) {
     return <AuthPage onLogin={handleLogin} />;
   }
-
   return (
     <Dashboard
       user={session.user}
